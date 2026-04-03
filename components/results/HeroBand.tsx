@@ -2,7 +2,6 @@
 
 import type { ScanResult } from "@/types/cert";
 import { GradeBadge } from "./GradeBadge";
-import { ShareButton } from "./ShareButton";
 
 interface HeroBandProps {
   result: ScanResult;
@@ -30,7 +29,6 @@ export function HeroBand({ result }: HeroBandProps) {
                 Certificate valid · {bestProtocol} · {hasVulns ? "Known vulnerabilities detected" : "No known vulnerabilities"} · {leaf?.daysRemaining ?? 0} days until expiry
               </p>
             </div>
-            <ShareButton shareId={result.shareId} />
           </div>
           <div className="flex flex-wrap gap-2 mt-4">
             <div className="px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
