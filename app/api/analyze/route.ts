@@ -4,6 +4,8 @@ import { nanoid } from "nanoid";
 import { fetchCertChain } from "@/lib/tls";
 import { fetchSecurityHeaders } from "@/lib/headers";
 import { computeGrade } from "@/lib/grader";
+import { db } from "@/lib/db";
+import { scans } from "@/lib/schema";
 import type { ScanResult, ProtocolSupport, VulnResult } from "@/types/cert";
 
 // Domain validation schema per spec
@@ -71,7 +73,11 @@ export async function POST(req: Request) {
       vulnerabilities,
     });
 
-    // Assemble result (no DB persistence yet per Phase 1)
+    // Generate shareId and assemble result
+    const shareId = nanoid(8);
+    const scannedAt = new Date().toISOString();
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days TTL
+
     const result: ScanResult = {
       domain,
       grade,
@@ -80,9 +86,24 @@ export async function POST(req: Request) {
       cipherSuites,
       vulnerabilities,
       headers,
-      scannedAt: new Date().toISOString(),
-      shareId: nanoid(8),
+      scannedAt,
+      shareId,
     };
+
+    // Persist to Neon (non-blocking — don't fail the response if DB is down)
+    try {
+      await db.insert(scans).values({
+        shareId,
+        domain,
+        grade,
+        result: result as unknown as Record<string, unknown>,
+        scannedAt: new Date(scannedAt),
+        expiresAt,
+      });
+    } catch (dbErr) {
+      // Log but don't fail — scan result is still valid
+      console.error("Failed to persist scan:", dbErr);
+    }
 
     return NextResponse.json(result);
   } catch (err) {

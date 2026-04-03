@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import type { ChainEntry } from "@/types/cert";
 import { ChevronDown, ChevronUp, Shield, FileBadge, Link2 } from "lucide-react";

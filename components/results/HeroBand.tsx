@@ -1,5 +1,8 @@
+"use client";
+
 import type { ScanResult } from "@/types/cert";
 import { GradeBadge } from "./GradeBadge";
+import { ShareButton } from "./ShareButton";
 
 interface HeroBandProps {
   result: ScanResult;
@@ -18,12 +21,17 @@ export function HeroBand({ result }: HeroBandProps) {
       <div className="flex items-start gap-5">
         <GradeBadge grade={result.grade} size="lg" />
         <div className="flex-1 min-w-0">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-            {result.domain} — {result.grade.startsWith("A") ? "secure" : "review needed"}
-          </h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            Certificate valid · {bestProtocol} · {hasVulns ? "Known vulnerabilities detected" : "No known vulnerabilities"} · {leaf?.daysRemaining ?? 0} days until expiry
-          </p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+                {result.domain} — {result.grade.startsWith("A") ? "secure" : "review needed"}
+              </h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Certificate valid · {bestProtocol} · {hasVulns ? "Known vulnerabilities detected" : "No known vulnerabilities"} · {leaf?.daysRemaining ?? 0} days until expiry
+              </p>
+            </div>
+            <ShareButton shareId={result.shareId} />
+          </div>
           <div className="flex flex-wrap gap-2 mt-4">
             <div className="px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
               <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">{bestProtocol}</span>
