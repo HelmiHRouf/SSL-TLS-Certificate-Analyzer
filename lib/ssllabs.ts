@@ -54,12 +54,19 @@ export async function startScan(domain: string): Promise<void> {
   const url = new URL(`${SSL_LABS_API_BASE}/analyze`);
   url.searchParams.set("host", domain);
   url.searchParams.set("startNew", "on");
+  url.searchParams.set("publish", "off");
   url.searchParams.set("ignoreMismatch", "on");
   url.searchParams.set("all", "done");
 
   const response = await fetch(url.toString());
   if (!response.ok) {
-    console.error("Failed to start SSL Labs scan:", response.statusText);
+    const body = await response.text().catch(() => "");
+    console.error(
+      "Failed to start SSL Labs scan:",
+      response.status,
+      response.statusText,
+      body
+    );
   }
 }
 
@@ -72,12 +79,16 @@ export async function getScanStatus(
 ): Promise<{ status: "pending" } | SSLLabsResult> {
   const url = new URL(`${SSL_LABS_API_BASE}/analyze`);
   url.searchParams.set("host", domain);
+  url.searchParams.set("publish", "off");
   url.searchParams.set("ignoreMismatch", "on");
   url.searchParams.set("all", "done");
 
   const response = await fetch(url.toString());
   if (!response.ok) {
-    throw new Error(`SSL Labs API error: ${response.statusText}`);
+    const body = await response.text().catch(() => "");
+    throw new Error(
+      `SSL Labs API error: ${response.status} ${response.statusText} - ${body}`
+    );
   }
 
   const data: SSLLabsResult = await response.json();
