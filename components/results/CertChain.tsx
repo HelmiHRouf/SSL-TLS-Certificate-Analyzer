@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { ChainEntry } from "@/types/cert";
-import { ChevronDown, ChevronUp, Shield, FileBadge } from "lucide-react";
+import { ChevronDown, ChevronUp, Shield, FileBadge, Link2 } from "lucide-react";
 
 interface CertChainProps {
   chain: ChainEntry[];
@@ -11,50 +11,78 @@ export function CertChain({ chain }: CertChainProps) {
 
   if (chain.length === 0) {
     return (
-      <div className="bg-white border rounded-lg p-6 shadow-sm">
-        <h2 className="text-lg font-semibold mb-4">Certificate Chain</h2>
+      <div className="bg-white border rounded-xl p-5 shadow-sm">
+        <h2 className="text-sm font-semibold mb-4">Certificate chain</h2>
         <p className="text-gray-500">No certificate data available.</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white border rounded-lg p-6 shadow-sm">
-      <h2 className="text-lg font-semibold mb-4">Certificate Chain</h2>
+    <div className="bg-white border rounded-xl p-5 shadow-sm">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-2 h-2 rounded-full bg-teal-600"></div>
+        <h2 className="text-sm font-semibold text-gray-900">Certificate chain</h2>
+      </div>
       <div className="space-y-3">
         {chain.map((cert, index) => (
           <div
             key={index}
-            className={`border rounded-lg overflow-hidden ${
-              cert.role === "leaf"
-                ? "border-brand/30 bg-brand/5"
-                : "border-gray-200"
-            }`}
+            className="border rounded-lg overflow-hidden border-gray-200"
           >
             <button
               onClick={() => setExpanded(expanded === index ? null : index)}
-              className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50/50 transition-colors"
+              className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors"
             >
               <div className="flex items-center gap-3 min-w-0">
-                {cert.role === "root" ? (
-                  <Shield className="h-5 w-5 text-grade-a-text flex-shrink-0" />
-                ) : cert.role === "leaf" ? (
-                  <FileBadge className="h-5 w-5 text-brand flex-shrink-0" />
-                ) : (
-                  <div className="h-5 w-5 rounded-full border-2 border-gray-300 flex-shrink-0" />
-                )}
-                <div className="min-w-0">
-                  <p className="font-medium text-gray-900 truncate">
+                <div
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                    cert.role === "root"
+                      ? "bg-green-100 text-green-700"
+                      : cert.role === "leaf"
+                        ? "bg-teal-100 text-teal-700"
+                        : "bg-blue-100 text-blue-700"
+                  }`}
+                >
+                  {cert.role === "root" ? (
+                    <Shield className="h-4 w-4" />
+                  ) : cert.role === "leaf" ? (
+                    <FileBadge className="h-4 w-4" />
+                  ) : (
+                    <Link2 className="h-4 w-4" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-gray-900 text-sm truncate">
                     {cert.subject}
                   </p>
-                  <p className="text-sm text-gray-500 capitalize">{cert.role}</p>
+                  <p className="text-xs text-gray-500">
+                    {cert.role === "root"
+                      ? `Root · Self-signed · Expires ${cert.validTo ? new Date(cert.validTo).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "Unknown"}`
+                      : cert.role === "intermediate"
+                        ? `Intermediate · Expires ${cert.validTo ? new Date(cert.validTo).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "Unknown"}`
+                        : `Leaf · SAN: ${cert.sans.slice(0, 2).join(", ")}${cert.sans.length > 2 ? "..." : ""} · Expires ${cert.validTo ? new Date(cert.validTo).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "Unknown"}`}
+                  </p>
                 </div>
               </div>
-              {expanded === index ? (
-                <ChevronUp className="h-5 w-5 text-gray-400 flex-shrink-0" />
-              ) : (
-                <ChevronDown className="h-5 w-5 text-gray-400 flex-shrink-0" />
-              )}
+              <div className="flex items-center gap-3 flex-shrink-0">
+                <span
+                  className={`text-xs px-2 py-0.5 rounded-full capitalize ${
+                    cert.role === "root"
+                      ? "bg-green-100 text-green-700"
+                      : cert.role === "leaf"
+                        ? "bg-teal-100 text-teal-700"
+                        : "bg-blue-100 text-blue-700"
+                  }`}
+                >
+                  {cert.role}
+                </span>
+                {expanded === index ? (
+                  <ChevronUp className="h-4 w-4 text-gray-400" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-gray-400" />
+                )}
+              </div>
             </button>
 
             {expanded === index && (

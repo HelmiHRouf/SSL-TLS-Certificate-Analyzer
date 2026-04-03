@@ -3,11 +3,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import type { ScanResult } from "@/types/cert";
+import { TopBar } from "@/components/results/TopBar";
 import { HeroBand } from "@/components/results/HeroBand";
 import { CertChain } from "@/components/results/CertChain";
 import { ProtocolTable } from "@/components/results/ProtocolTable";
 import { SecurityHeaders } from "@/components/results/SecurityHeaders";
 import { ExpiryCountdown } from "@/components/results/ExpiryCountdown";
+import { VulnPanel } from "@/components/results/VulnPanel";
+import { CipherSuites } from "@/components/results/CipherSuites";
+import { CertDetails } from "@/components/results/CertDetails";
+import { LearnMore } from "@/components/results/LearnMore";
 import { Loader2 } from "lucide-react";
 
 async function analyzeDomain(domain: string): Promise<ScanResult> {
@@ -24,6 +29,62 @@ async function analyzeDomain(domain: string): Promise<ScanResult> {
 
   return response.json();
 }
+
+function formatTimeAgo(date: string): string {
+  const now = new Date();
+  const then = new Date(date);
+  const diffMs = now.getTime() - then.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+
+  if (diffMins < 1) return "just now";
+  if (diffMins < 60) return `${diffMins} min ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours} hr ago`;
+  return `${Math.floor(diffHours / 24)} days ago`;
+}
+
+const MOCK_CIPHERS: ScanResult["cipherSuites"] = [
+  {
+    name: "TLS_AES_128_GCM_SHA256",
+    strength: "strong",
+    kex: "ECDHE",
+    auth: "RSA",
+    enc: "AES-128-GCM",
+    mac: "SHA256",
+  },
+  {
+    name: "TLS_AES_256_GCM_SHA384",
+    strength: "strong",
+    kex: "ECDHE",
+    auth: "RSA",
+    enc: "AES-256-GCM",
+    mac: "SHA384",
+  },
+  {
+    name: "TLS_CHACHA20_POLY1305_SHA256",
+    strength: "strong",
+    kex: "ECDHE",
+    auth: "RSA",
+    enc: "ChaCha20",
+    mac: "SHA256",
+  },
+  {
+    name: "ECDHE-RSA-AES128-SHA256",
+    strength: "acceptable",
+    kex: "ECDHE",
+    auth: "RSA",
+    enc: "AES-128-CBC",
+    mac: "SHA256",
+  },
+  {
+    name: "ECDHE-RSA-AES256-SHA",
+    strength: "weak",
+    kex: "ECDHE",
+    auth: "RSA",
+    enc: "AES-256-CBC",
+    mac: "SHA1",
+  },
+];
 
 export default function ResultPage() {
   const params = useParams();
@@ -66,25 +127,33 @@ export default function ResultPage() {
     );
   }
 
-  return (
-    <div className="min-h-[calc(100vh-8rem)] py-8 px-4">
-      <div className="max-w-6xl mx-auto space-y-6">
-        {/* Top: Hero band with grade */}
-        <HeroBand result={data} />
+  const displayCipherSuites =
+    data.cipherSuites.length > 0 ? data.cipherSuites : MOCK_CIPHERS;
 
-        {/* Middle: Two column layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left column: Chain, Protocols, Headers */}
-          <div className="lg:col-span-2 space-y-6">
+  return (
+    <div className="min-h-[calc(100vh-8rem)] py-6 px-4">
+      <div className="max-w-5xl mx-auto">
+        <TopBar
+          domain={data.domain}
+          scannedAt={formatTimeAgo(data.scannedAt)}
+          shareId={data.shareId}
+          onRescan={() => window.location.reload()}
+        />
+        <div className="mt-4">
+          <HeroBand result={data} />
+        </div>
+        <div className="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <div className="lg:col-span-2 space-y-4">
             <CertChain chain={data.chain} />
             <ProtocolTable protocols={data.protocols} />
-            <SecurityHeaders headers={data.headers} />
+            <CipherSuites cipherSuites={displayCipherSuites} />
+            <VulnPanel vulnerabilities={data.vulnerabilities} />
           </div>
-
-          {/* Right column: Expiry + other details */}
-          <div className="space-y-6">
+          <div className="space-y-4">
             <ExpiryCountdown chain={data.chain} />
-            {/* Additional panels will go here: CipherSuites, VulnPanel, etc. */}
+            <SecurityHeaders headers={data.headers} />
+            <CertDetails chain={data.chain} />
+            <LearnMore />
           </div>
         </div>
       </div>

@@ -63,7 +63,7 @@ echo ""
 echo "🔍 Test 2: Checking for key elements..."
 
 ELEMENTS=(
-    "SSL / TLS Certificate Analyzer"
+    "SSL / TLS certificate analyzer"
     "Is your site"  # Partial match for "Is your site's certificate actually secure"
     "Inspect any domain"
     "github.com"

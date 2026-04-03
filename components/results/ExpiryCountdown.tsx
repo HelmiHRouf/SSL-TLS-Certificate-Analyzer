@@ -9,8 +9,8 @@ export function ExpiryCountdown({ chain }: ExpiryCountdownProps) {
 
   if (!leaf) {
     return (
-      <div className="bg-white border rounded-lg p-6 shadow-sm">
-        <h2 className="text-lg font-semibold mb-4">Expiry</h2>
+      <div className="bg-white border rounded-xl p-5 shadow-sm">
+        <h2 className="text-sm font-semibold mb-4">Expiry</h2>
         <p className="text-gray-500">No certificate data available.</p>
       </div>
     );
@@ -37,13 +37,14 @@ export function ExpiryCountdown({ chain }: ExpiryCountdownProps) {
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
   return (
-    <div className="bg-white border rounded-lg p-6 shadow-sm">
-      <h2 className="text-lg font-semibold mb-4">Expiry</h2>
+    <div className="bg-white border rounded-xl p-5 shadow-sm">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-2 h-2 rounded-full bg-green-600"></div>
+        <h2 className="text-sm font-semibold text-gray-900">Expiry</h2>
+      </div>
       <div className="flex flex-col items-center">
-        {/* Circular progress */}
         <div className="relative w-32 h-32">
           <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-            {/* Background circle */}
             <circle
               cx="50"
               cy="50"
@@ -53,7 +54,6 @@ export function ExpiryCountdown({ chain }: ExpiryCountdownProps) {
               strokeWidth="8"
               className="text-gray-200"
             />
-            {/* Progress circle */}
             <circle
               cx="50"
               cy="50"
@@ -70,23 +70,33 @@ export function ExpiryCountdown({ chain }: ExpiryCountdownProps) {
               }}
             />
           </svg>
-          {/* Center text */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className={`text-2xl font-bold ${getColor()}`}>{days}</span>
             <span className="text-xs text-gray-500">days</span>
           </div>
         </div>
-
-        {/* Expiry date */}
-        <p className="mt-4 text-sm text-gray-600 text-center">
-          Expires{" "}
-          {leaf.validTo
-            ? new Date(leaf.validTo).toLocaleDateString("en-US", {
-                month: "short",
-                year: "numeric",
-              })
-            : "Unknown"}
-        </p>
+        <div className="mt-4 text-center space-y-1">
+          <p className="text-sm text-gray-700">
+            Expires{" "}
+            {leaf.validTo
+              ? new Date(leaf.validTo).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })
+              : "Unknown"}
+          </p>
+          <p className="text-xs text-gray-500">
+            Issued{" "}
+            {leaf.validFrom
+              ? new Date(leaf.validFrom).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })
+              : "Unknown"}
+          </p>
+        </div>
       </div>
     </div>
   );

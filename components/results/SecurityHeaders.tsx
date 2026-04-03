@@ -1,54 +1,62 @@
 import type { SecurityHeader } from "@/types/cert";
-import { Check, X, AlertCircle } from "lucide-react";
+import { LearnTooltip } from "./LearnTooltip";
+import { LEARN_CONTENT } from "@/lib/learn-content";
 
 interface SecurityHeadersProps {
   headers: SecurityHeader[];
 }
 
 export function SecurityHeaders({ headers }: SecurityHeadersProps) {
-  const getIcon = (status: SecurityHeader["status"]) => {
-    switch (status) {
-      case "present":
-        return <Check className="h-4 w-4 text-grade-a-text" />;
-      case "missing":
-        return <X className="h-4 w-4 text-grade-cf-text" />;
-      case "misconfigured":
-        return <AlertCircle className="h-4 w-4 text-grade-b-text" />;
+  const getDisplay = (status: SecurityHeader["status"]) => {
+    if (status === "present") {
+      return { label: "Present", classes: "bg-green-100 text-green-700" };
     }
-  };
-
-  const getChipStyle = (status: SecurityHeader["status"]) => {
-    switch (status) {
-      case "present":
-        return "bg-grade-a-bg text-grade-a-text";
-      case "missing":
-        return "bg-grade-cf-bg text-grade-cf-text";
-      case "misconfigured":
-        return "bg-grade-b-bg text-grade-b-text";
+    if (status === "misconfigured") {
+      return { label: "Partial", classes: "bg-amber-100 text-amber-700" };
     }
+    return { label: "Missing", classes: "bg-gray-100 text-gray-600" };
   };
 
   return (
-    <div className="bg-white border rounded-lg p-6 shadow-sm">
-      <h2 className="text-lg font-semibold mb-4">Security Headers</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {headers.map((header) => (
-          <div
-            key={header.name}
-            className="flex items-center justify-between p-3 rounded-lg bg-gray-50"
-          >
-            <span className="font-medium text-gray-900">{header.name}</span>
-            <span
-              className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getChipStyle(
-                header.status
-              )}`}
-            >
-              {getIcon(header.status)}
-              <span className="capitalize">{header.status}</span>
-            </span>
-          </div>
-        ))}
+    <div className="bg-white border rounded-xl p-5 shadow-sm">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+        <h2 className="text-sm font-semibold text-gray-900">Security headers</h2>
       </div>
+      <div className="space-y-2">
+        {headers.map((header) => {
+          const learn = LEARN_CONTENT.headers[header.name as keyof typeof LEARN_CONTENT.headers];
+          const display = getDisplay(header.status);
+          return (
+            <div
+              key={header.name}
+              className="flex items-center justify-between py-2 border-b last:border-0 border-gray-100"
+            >
+              <div className="flex items-center">
+                <span className="text-sm text-gray-800">{header.name}</span>
+                {learn && (
+                  <LearnTooltip
+                    title={learn.title}
+                    description={learn.description}
+                    link={learn.link}
+                  />
+                )}
+              </div>
+              <span
+                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${display.classes}`}
+              >
+                {display.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <a
+        href="/learn/security-headers"
+        className="inline-block mt-3 text-sm text-learn hover:underline"
+      >
+        Learn about security headers →
+      </a>
     </div>
   );
 }
