@@ -54,10 +54,13 @@ const config: Config = {
         grade: {
           "a-text": "#27500A",
           "a-bg": "#EAF3DE",
+          "a-text-dark": "#86EFAC",
           "b-text": "#633806",
           "b-bg": "#FAEEDA",
+          "b-text-dark": "#FCD34D",
           "cf-text": "#791F1F",
           "cf-bg": "#FCEBEB",
+          "cf-text-dark": "#F87171",
         },
       },
       borderRadius: {

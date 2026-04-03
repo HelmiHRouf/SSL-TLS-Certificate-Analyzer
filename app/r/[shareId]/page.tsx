@@ -4,8 +4,8 @@ export default function SharePage({
   params: { shareId: string };
 }) {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center">
-      <h1 className="text-2xl font-bold">Shared scan: {params.shareId}</h1>
+    <main className="flex min-h-screen flex-col items-center justify-center bg-background">
+      <h1 className="text-2xl font-bold text-foreground">Shared scan: {params.shareId}</h1>
     </main>
   );
 }

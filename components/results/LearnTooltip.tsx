@@ -23,7 +23,7 @@ export function LearnTooltip({
     <div className="relative inline-block">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="ml-2 p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+        className="ml-2 p-1 rounded-full text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
         aria-label={`Learn about ${title}`}
       >
         <HelpCircle className="h-4 w-4" />
@@ -38,17 +38,17 @@ export function LearnTooltip({
           />
 
           {/* Tooltip popup */}
-          <div className="absolute z-50 left-1/2 -translate-x-1/2 mt-2 w-72 p-4 bg-white rounded-lg shadow-lg border border-gray-200 animate-in fade-in zoom-in-95 duration-100">
+          <div className="absolute z-50 left-1/2 -translate-x-1/2 mt-2 w-72 p-4 bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 animate-in fade-in zoom-in-95 duration-100">
             <div className="flex items-start justify-between">
-              <h4 className="font-semibold text-gray-900 text-sm">{title}</h4>
+              <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{title}</h4>
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-0.5 rounded hover:bg-gray-100 -mr-1 -mt-1"
+                className="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 -mr-1 -mt-1"
               >
-                <X className="h-4 w-4 text-gray-400" />
+                <X className="h-4 w-4 text-gray-400 dark:text-gray-500" />
               </button>
             </div>
-            <p className="text-sm text-gray-600 mt-1.5 leading-relaxed">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1.5 leading-relaxed">
               {description}
             </p>
             {link && (

@@ -21,8 +21,8 @@ export function SearchBar() {
 
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-xl mx-auto">
-      <div className="relative flex items-center bg-white border rounded-xl shadow-sm hover:shadow-md transition-shadow">
-        <Search className="absolute left-4 h-5 w-5 text-gray-400" />
+      <div className="relative flex items-center bg-white dark:bg-gray-900 border rounded-xl shadow-sm hover:shadow-md transition-shadow">
+        <Search className="absolute left-4 h-5 w-5 text-gray-400 dark:text-gray-500" />
         <Input
           type="text"
           placeholder="e.g. github.com"
@@ -34,7 +34,7 @@ export function SearchBar() {
         <Button
           type="submit"
           disabled={isLoading || !domain.trim()}
-          className="absolute right-2 h-10 px-4 bg-gray-900 hover:bg-gray-800 text-white rounded-lg"
+          className="absolute right-2 h-10 px-4 bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900 rounded-lg"
         >
           {isLoading ? (
             <Loader2 className="h-4 w-4 animate-spin" />

@@ -13,10 +13,10 @@ export function ProtocolTable({ protocols }: ProtocolTableProps) {
   );
 
   return (
-    <div className="bg-white border rounded-xl p-5 shadow-sm">
+    <div className="bg-white dark:bg-gray-900 border rounded-xl p-5 shadow-sm">
       <div className="flex items-center gap-2 mb-4">
         <div className="w-2 h-2 rounded-full bg-blue-600"></div>
-        <h2 className="text-sm font-semibold text-gray-900">Protocol support</h2>
+        <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Protocol support</h2>
       </div>
       <div className="space-y-2">
         {sorted.map((protocol) => {
@@ -24,17 +24,17 @@ export function ProtocolTable({ protocols }: ProtocolTableProps) {
           return (
             <div
               key={protocol.version}
-              className="flex items-center justify-between py-2 border-b last:border-0 border-gray-100"
+              className="flex items-center justify-between py-2 border-b last:border-0 border-gray-100 dark:border-gray-800"
             >
-              <span className="text-sm text-gray-800">{protocol.version}</span>
+              <span className="text-sm text-gray-800 dark:text-gray-200">{protocol.version}</span>
               <div className="flex items-center">
                 <span
                   className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                     protocol.supported
                       ? protocol.risk === "none"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-red-100 text-red-700"
-                      : "bg-red-100/70 text-red-700"
+                        ? "bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-400"
+                        : "bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-400"
+                      : "bg-red-100/70 dark:bg-red-900/30 text-red-700 dark:text-red-400"
                   }`}
                 >
                   {protocol.supported ? "Supported" : "Disabled"}

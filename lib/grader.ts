@@ -112,13 +112,13 @@ export function getGradeColorClasses(grade: Grade): {
   switch (grade) {
     case "A+":
     case "A":
-      return { bg: "bg-grade-a-bg", text: "text-grade-a-text" };
+      return { bg: "bg-grade-a-bg", text: "text-grade-a-text dark:text-grade-a-text-dark" };
     case "B":
-      return { bg: "bg-grade-b-bg", text: "text-grade-b-text" };
+      return { bg: "bg-grade-b-bg", text: "text-grade-b-text dark:text-grade-b-text-dark" };
     case "C":
     case "F":
-      return { bg: "bg-grade-cf-bg", text: "text-grade-cf-text" };
+      return { bg: "bg-grade-cf-bg", text: "text-grade-cf-text dark:text-grade-cf-text-dark" };
     default:
-      return { bg: "bg-gray-100", text: "text-gray-600" };
+      return { bg: "bg-gray-100 dark:bg-gray-800", text: "text-gray-600 dark:text-gray-400" };
   }
 }

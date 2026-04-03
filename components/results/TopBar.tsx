@@ -42,9 +42,9 @@ export function TopBar({ domain, scannedAt, shareId, onRescan }: TopBarProps) {
           <ArrowLeft className="h-4 w-4" />
           CertLens
         </Button>
-        <span className="text-gray-400">|</span>
-        <span className="font-mono text-sm text-gray-900">{domain}</span>
-        <span className="text-sm text-gray-500">Scanned {scannedAt}</span>
+        <span className="text-gray-400 dark:text-gray-600">|</span>
+        <span className="font-mono text-sm text-gray-900 dark:text-gray-100">{domain}</span>
+        <span className="text-sm text-gray-500 dark:text-gray-400">Scanned {scannedAt}</span>
       </div>
       <div className="flex items-center gap-2">
         <Button

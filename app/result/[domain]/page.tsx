@@ -99,10 +99,10 @@ export default function ResultPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center">
+      <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-brand" />
-          <p className="text-gray-600">Analyzing {domain}...</p>
+          <p className="text-gray-600 dark:text-gray-400">Analyzing {domain}...</p>
         </div>
       </div>
     );
@@ -110,10 +110,10 @@ export default function ResultPage() {
 
   if (error) {
     return (
-      <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center px-4">
+      <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center px-4 bg-background">
         <div className="text-center">
-          <h1 className="text-xl font-bold text-red-600 mb-2">Analysis Failed</h1>
-          <p className="text-gray-600 max-w-md">{error.message}</p>
+          <h1 className="text-xl font-bold text-red-600 dark:text-red-400 mb-2">Analysis Failed</h1>
+          <p className="text-gray-600 dark:text-gray-400 max-w-md">{error.message}</p>
         </div>
       </div>
     );
@@ -121,8 +121,8 @@ export default function ResultPage() {
 
   if (!data) {
     return (
-      <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center">
-        <p className="text-gray-600">No data available</p>
+      <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center bg-background">
+        <p className="text-gray-600 dark:text-gray-400">No data available</p>
       </div>
     );
   }
@@ -131,7 +131,7 @@ export default function ResultPage() {
     data.cipherSuites.length > 0 ? data.cipherSuites : MOCK_CIPHERS;
 
   return (
-    <div className="min-h-[calc(100vh-8rem)] py-6 px-4">
+    <div className="min-h-[calc(100vh-8rem)] py-6 px-4 bg-background">
       <div className="max-w-5xl mx-auto">
         <TopBar
           domain={data.domain}

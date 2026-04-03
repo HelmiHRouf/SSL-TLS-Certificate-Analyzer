@@ -21,16 +21,16 @@ export function CertDetails({ chain }: CertDetailsProps) {
   ];
 
   return (
-    <div className="bg-white border rounded-lg p-5 shadow-sm">
+    <div className="bg-white dark:bg-gray-900 border rounded-lg p-5 shadow-sm">
       <div className="flex items-center gap-2 mb-4">
         <div className="w-2 h-2 rounded-full bg-gray-400"></div>
-        <h2 className="text-sm font-semibold text-gray-900">Cert details</h2>
+        <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Cert details</h2>
       </div>
       <div className="space-y-2">
         {details.map((detail) => (
           <div key={detail.label} className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">{detail.label}</span>
-            <span className="font-mono text-gray-900">{detail.value}</span>
+            <span className="text-gray-600 dark:text-gray-400">{detail.label}</span>
+            <span className="font-mono text-gray-900 dark:text-gray-100">{detail.value}</span>
           </div>
         ))}
       </div>

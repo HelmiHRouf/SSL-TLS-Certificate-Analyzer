@@ -15,21 +15,21 @@ export function CipherSuites({ cipherSuites }: CipherSuitesProps) {
 
   if (cipherSuites.length === 0) {
     return (
-      <div className="bg-white border rounded-xl p-5 shadow-sm">
+      <div className="bg-white dark:bg-gray-900 border rounded-xl p-5 shadow-sm">
         <div className="flex items-center gap-2 mb-2">
           <div className="w-2 h-2 rounded-full bg-purple-600"></div>
-          <h2 className="text-sm font-semibold text-gray-900">Cipher suite breakdown</h2>
-          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Cipher suite breakdown</h2>
+          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
             Pending
           </span>
         </div>
-        <div className="flex items-start gap-3 p-4 rounded-lg bg-gray-50 border border-gray-100">
-          <Info className="h-5 w-5 text-gray-400 flex-shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 p-4 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
+          <Info className="h-5 w-5 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Cipher suite analysis is performed asynchronously and may take up to 60 seconds.
             </p>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
               Deep scan via SSL Labs is running in the background...
             </p>
           </div>
@@ -56,26 +56,26 @@ export function CipherSuites({ cipherSuites }: CipherSuitesProps) {
   );
 
   return (
-    <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-gray-900 border rounded-xl shadow-sm overflow-hidden">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 transition-colors"
+        className="w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
       >
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-purple-600"></div>
-          <h2 className="text-sm font-semibold text-gray-900">Cipher suite breakdown</h2>
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Cipher suite breakdown</h2>
           {hasWeakOrInsecure && (
-            <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-700">
+            <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400">
               1 weak cipher detected
             </span>
           )}
         </div>
         {isOpen ? (
-          <span className="text-sm text-gray-600 inline-flex items-center gap-1">
+          <span className="text-sm text-gray-600 dark:text-gray-400 inline-flex items-center gap-1">
             Hide <ChevronUp className="h-4 w-4" />
           </span>
         ) : (
-          <span className="text-sm text-gray-600 inline-flex items-center gap-1">
+          <span className="text-sm text-gray-600 dark:text-gray-400 inline-flex items-center gap-1">
             Show <ChevronDown className="h-4 w-4" />
           </span>
         )}
@@ -83,41 +83,41 @@ export function CipherSuites({ cipherSuites }: CipherSuitesProps) {
 
       {isOpen && (
         <div className="border-t px-5 pb-4 overflow-x-auto">
-          <p className="text-xs text-gray-500 my-3">
-            Negotiated: <span className="font-mono text-gray-700">TLS_AES_128_GCM_SHA256</span>{" "}
-            <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700">
+          <p className="text-xs text-gray-500 dark:text-gray-400 my-3">
+            Negotiated: <span className="font-mono text-gray-700 dark:text-gray-300">TLS_AES_128_GCM_SHA256</span>{" "}
+            <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-400">
               Strong
             </span>
           </p>
           <table className="w-full min-w-[600px]">
             <thead>
-              <tr className="border-b">
-                <th className="text-left py-2 text-xs font-medium text-gray-500">
+              <tr className="border-b dark:border-gray-800">
+                <th className="text-left py-2 text-xs font-medium text-gray-500 dark:text-gray-400">
                   Name
                 </th>
-                <th className="text-left py-2 text-xs font-medium text-gray-500">
+                <th className="text-left py-2 text-xs font-medium text-gray-500 dark:text-gray-400">
              Key ex.
                 </th>
-                <th className="text-left py-2 px-4 text-sm font-medium text-gray-600">
+                <th className="text-left py-2 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
                   Auth
                 </th>
-                <th className="text-left py-2 text-xs font-medium text-gray-500">
+                <th className="text-left py-2 text-xs font-medium text-gray-500 dark:text-gray-400">
                   Encryption
                 </th>
-                <th className="text-left py-2 text-xs font-medium text-gray-500">
+                <th className="text-left py-2 text-xs font-medium text-gray-500 dark:text-gray-400">
                   Strength
                 </th>
               </tr>
             </thead>
             <tbody>
               {cipherSuites.map((cipher, index) => (
-                <tr key={index} className="border-b last:border-0">
-                  <td className="py-2 text-sm font-mono text-gray-700">
+                <tr key={index} className="border-b last:border-0 dark:border-gray-800">
+                  <td className="py-2 text-sm font-mono text-gray-700 dark:text-gray-300">
                     {cipher.name}
                   </td>
-                  <td className="py-2 text-sm text-gray-600">{cipher.kex}</td>
-                  <td className="py-2 text-sm text-gray-600">{cipher.auth}</td>
-                  <td className="py-2 text-sm text-gray-600">{cipher.enc}</td>
+                  <td className="py-2 text-sm text-gray-600 dark:text-gray-400">{cipher.kex}</td>
+                  <td className="py-2 text-sm text-gray-600 dark:text-gray-400">{cipher.auth}</td>
+                  <td className="py-2 text-sm text-gray-600 dark:text-gray-400">{cipher.enc}</td>
                   <td className="py-2">
                     <span
                       className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${getStrengthStyle(
@@ -132,7 +132,7 @@ export function CipherSuites({ cipherSuites }: CipherSuitesProps) {
             </tbody>
           </table>
           {hasWeakOrInsecure && (
-            <p className="text-xs text-gray-500 mt-3">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
               1 weak cipher detected — consider disabling ECDHE-RSA-AES256-SHA.{" "}
               <a href="/learn/cipher-suites" className="text-learn hover:underline">
                 Learn about cipher suites →

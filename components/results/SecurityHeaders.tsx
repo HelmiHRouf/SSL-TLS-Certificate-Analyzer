@@ -9,19 +9,19 @@ interface SecurityHeadersProps {
 export function SecurityHeaders({ headers }: SecurityHeadersProps) {
   const getDisplay = (status: SecurityHeader["status"]) => {
     if (status === "present") {
-      return { label: "Present", classes: "bg-green-100 text-green-700" };
+      return { label: "Present", classes: "bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-400" };
     }
     if (status === "misconfigured") {
-      return { label: "Partial", classes: "bg-amber-100 text-amber-700" };
+      return { label: "Partial", classes: "bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400" };
     }
-    return { label: "Missing", classes: "bg-gray-100 text-gray-600" };
+    return { label: "Missing", classes: "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400" };
   };
 
   return (
-    <div className="bg-white border rounded-xl p-5 shadow-sm">
+    <div className="bg-white dark:bg-gray-900 border rounded-xl p-5 shadow-sm">
       <div className="flex items-center gap-2 mb-4">
         <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
-        <h2 className="text-sm font-semibold text-gray-900">Security headers</h2>
+        <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Security headers</h2>
       </div>
       <div className="space-y-2">
         {headers.map((header) => {
@@ -30,10 +30,10 @@ export function SecurityHeaders({ headers }: SecurityHeadersProps) {
           return (
             <div
               key={header.name}
-              className="flex items-center justify-between py-2 border-b last:border-0 border-gray-100"
+              className="flex items-center justify-between py-2 border-b last:border-0 border-gray-100 dark:border-gray-800"
             >
               <div className="flex items-center">
-                <span className="text-sm text-gray-800">{header.name}</span>
+                <span className="text-sm text-gray-800 dark:text-gray-200">{header.name}</span>
                 {learn && (
                   <LearnTooltip
                     title={learn.title}
