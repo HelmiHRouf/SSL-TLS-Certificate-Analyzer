@@ -20,19 +20,30 @@ function isPrivateIP(ip: string): boolean {
 
 export async function fetchCertChain(domain: string): Promise<ChainEntry[]> {
   // Resolve domain first to check for private IPs (SSRF protection)
+  // Add 5s timeout for DNS lookup to prevent indefinite hangs
   try {
-    const { address } = await dns.lookup(domain);
+    const dnsPromise = dns.lookup(domain);
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error("DNS lookup timeout after 5 seconds")), 5000);
+    });
+    const { address } = await Promise.race([dnsPromise, timeoutPromise]);
+
     if (isPrivateIP(address)) {
       throw new Error(
         `Cannot scan private IP addresses (${address}). Please provide a public domain.`,
       );
     }
   } catch (err) {
-    // If DNS lookup fails for reasons other than private IP, still proceed
-    // The TLS connection will fail if the domain is truly invalid
+    // If DNS lookup fails or times out, throw error
+    // Don't proceed without DNS check to maintain SSRF protection
     if (err instanceof Error && err.message.includes("private IP")) {
       throw err;
     }
+    if (err instanceof Error && err.message.includes("timeout")) {
+      throw new Error(`DNS lookup for ${domain} timed out. Domain may not exist or DNS is slow.`);
+    }
+    // Other DNS errors - domain likely doesn't exist
+    throw new Error(`Failed to resolve domain ${domain}: ${err instanceof Error ? err.message : "Unknown error"}`);
   }
 
   return new Promise((resolve, reject) => {
@@ -41,8 +52,8 @@ export async function fetchCertChain(domain: string): Promise<ChainEntry[]> {
         host: domain,
         port: 443,
         servername: domain,
-        // Request full certificate chain
-        rejectUnauthorized: false, // We want to analyze even invalid/expired certs
+        rejectUnauthorized: false,
+        timeout: 8000, // 8s timeout in connection options
       },
       () => {
         const cert = socket.getPeerCertificate(true);
@@ -57,15 +68,15 @@ export async function fetchCertChain(domain: string): Promise<ChainEntry[]> {
       },
     );
 
-    // 8 second timeout per spec
-    socket.setTimeout(8000, () => {
+    socket.on("error", (err) => {
+      reject(err);
+    });
+
+    socket.on("timeout", () => {
       socket.destroy();
       reject(new Error("Connection timeout after 8 seconds"));
     });
 
-    socket.on("error", (err) => {
-      reject(err);
-    });
   });
 }
 
@@ -74,16 +85,31 @@ function parseCertChain(cert: tls.PeerCertificate): ChainEntry[] {
 
   // Build chain from leaf to root
   let current: tls.PeerCertificate | undefined = cert;
-  while (current) {
+  let iterations = 0;
+  const MAX_ITERATIONS = 10; // Safety limit
+  const seenFingerprints = new Set<string>();
+
+  while (current && iterations < MAX_ITERATIONS) {
+    iterations++;
+
     const entry = parseCertEntry(current, chain.length);
     chain.push(entry);
+
+    // Track seen fingerprints to detect circular chains
+    if (current.fingerprint) {
+      if (seenFingerprints.has(current.fingerprint)) {
+        // Circular reference detected
+        break;
+      }
+      seenFingerprints.add(current.fingerprint);
+    }
 
     // Next cert in chain (if available)
     // @ts-ignore - issuerCertificate exists at runtime but not in types
     const nextCert: tls.PeerCertificate | undefined = current.issuerCertificate;
 
-    // Prevent infinite loops (self-signed root)
-    if (nextCert && nextCert.fingerprint === cert.fingerprint) {
+    // Stop if: no next cert, or next cert is the same as current (self-signed root)
+    if (!nextCert || nextCert.fingerprint === current.fingerprint) {
       break;
     }
     current = nextCert;
