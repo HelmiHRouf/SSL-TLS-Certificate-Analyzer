@@ -6,6 +6,8 @@ import { fetchSecurityHeaders } from "@/lib/headers";
 import { computeGrade } from "@/lib/grader";
 import { db } from "@/lib/db";
 import { scans } from "@/lib/schema";
+import { getCache, setCache, clearCache } from "@/lib/cache";
+import { startScan } from "@/lib/ssllabs";
 import type { ScanResult, ProtocolSupport, VulnResult } from "@/types/cert";
 
 // Domain validation schema per spec
@@ -21,6 +23,7 @@ const domainSchema = z.object({
     .pipe(
       z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9\-\.]{1,253}[a-zA-Z0-9]$/),
     ),
+  force: z.boolean().optional().default(false),
 });
 
 // Placeholder protocol check — will be replaced with actual TLS version detection
@@ -52,9 +55,21 @@ function getPlaceholderVulns(): VulnResult[] {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { domain } = domainSchema.parse(body);
+    const { domain, force } = domainSchema.parse(body);
 
-    // Run cert extraction and headers in parallel (both fast, <2s)
+    // 1. Check cache first (unless force=true for re-scan)
+    if (!force) {
+      const cached = await getCache(domain);
+      if (cached) {
+        // Return cached result immediately
+        return NextResponse.json(cached);
+      }
+    } else {
+      // Force refresh: clear existing cache
+      await clearCache(domain);
+    }
+
+    // 2. Run cert extraction and headers in parallel (both fast, <2s)
     const [chain, headers, protocols] = await Promise.all([
       fetchCertChain(domain),
       fetchSecurityHeaders(domain),
@@ -90,7 +105,15 @@ export async function POST(req: Request) {
       shareId,
     };
 
-    // Persist to Neon (non-blocking — don't fail the response if DB is down)
+    // 3. Kick off SSL Labs deep scan (fire-and-forget, don't await)
+    startScan(domain).catch((err) => {
+      console.error("Failed to start SSL Labs scan:", err);
+    });
+
+    // 4. Persist to KV cache (non-blocking)
+    await setCache(domain, result);
+
+    // 5. Persist to Neon (non-blocking — don't fail the response if DB is down)
     try {
       await db.insert(scans).values({
         shareId,

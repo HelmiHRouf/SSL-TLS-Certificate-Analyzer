@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
+import { useState, useCallback } from "react";
 import type { ScanResult } from "@/types/cert";
 import { TopBar } from "@/components/results/TopBar";
 import { HeroBand } from "@/components/results/HeroBand";
@@ -15,11 +16,11 @@ import { CertDetails } from "@/components/results/CertDetails";
 import { LearnMore } from "@/components/results/LearnMore";
 import { Loader2 } from "lucide-react";
 
-async function analyzeDomain(domain: string): Promise<ScanResult> {
+async function analyzeDomain(domain: string, force = false): Promise<ScanResult> {
   const response = await fetch("/api/analyze", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ domain }),
+    body: JSON.stringify({ domain, force }),
   });
 
   if (!response.ok) {
@@ -28,6 +29,17 @@ async function analyzeDomain(domain: string): Promise<ScanResult> {
   }
 
   return response.json();
+}
+
+async function pollGrade(domain: string): Promise<Partial<ScanResult>> {
+  const response = await fetch(`/api/grade?domain=${encodeURIComponent(domain)}`);
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch grade");
+  }
+
+  const data = await response.json();
+  return data;
 }
 
 function formatTimeAgo(date: string): string {
@@ -89,13 +101,53 @@ const MOCK_CIPHERS: ScanResult["cipherSuites"] = [
 export default function ResultPage() {
   const params = useParams();
   const domain = decodeURIComponent((params.domain as string) || "");
+  const [rescanKey, setRescanKey] = useState(0);
 
-  const { data, isLoading, error } = useQuery<ScanResult, Error>({
-    queryKey: ["scan", domain],
-    queryFn: () => analyzeDomain(domain),
+  const {
+    data,
+    isLoading,
+    error,
+    refetch: refetchScan,
+  } = useQuery<ScanResult, Error>({
+    queryKey: ["scan", domain, rescanKey],
+    queryFn: () => analyzeDomain(domain, rescanKey > 0),
     enabled: !!domain,
     retry: 1,
+    staleTime: 0,
   });
+
+  // Poll SSL Labs grade every 5 seconds until ready
+  const { data: gradeData, isLoading: gradeLoading } = useQuery<Partial<ScanResult>, Error>({
+    queryKey: ["grade", domain, data?.shareId],
+    queryFn: () => pollGrade(domain),
+    enabled: !!domain && !!data && data.cipherSuites.length === 0,
+    refetchInterval: (query) => {
+      // Stop polling once we have cipher suites (SSL Labs data arrived)
+      const lastData = query.state.data;
+      if (lastData && (lastData as ScanResult).cipherSuites && (lastData as ScanResult).cipherSuites!.length > 0) {
+        return false;
+      }
+      return 5000; // Poll every 5 seconds
+    },
+    refetchIntervalInBackground: true,
+    retry: 3,
+  });
+
+  // Merge grade data with scan data
+  const mergedData: ScanResult | undefined = data
+    ? {
+        ...data,
+        ...(gradeData?.grade && { grade: gradeData.grade }),
+        ...(gradeData?.protocols && { protocols: gradeData.protocols }),
+        ...(gradeData?.cipherSuites && gradeData.cipherSuites.length > 0 && { cipherSuites: gradeData.cipherSuites }),
+        ...(gradeData?.vulnerabilities && { vulnerabilities: gradeData.vulnerabilities }),
+      }
+    : undefined;
+
+  const handleRescan = useCallback(() => {
+    setRescanKey((prev) => prev + 1);
+    refetchScan();
+  }, [refetchScan]);
 
   if (isLoading) {
     return (
@@ -119,7 +171,7 @@ export default function ResultPage() {
     );
   }
 
-  if (!data) {
+  if (!mergedData) {
     return (
       <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center bg-background">
         <p className="text-gray-600 dark:text-gray-400">No data available</p>
@@ -127,32 +179,41 @@ export default function ResultPage() {
     );
   }
 
+  // Show pending indicator if SSL Labs data is still loading
+  const isPendingSSL = gradeLoading || mergedData.cipherSuites.length === 0;
+
   const displayCipherSuites =
-    data.cipherSuites.length > 0 ? data.cipherSuites : MOCK_CIPHERS;
+    mergedData.cipherSuites.length > 0 ? mergedData.cipherSuites : MOCK_CIPHERS;
 
   return (
     <div className="min-h-[calc(100vh-8rem)] py-6 px-4 bg-background">
       <div className="max-w-5xl mx-auto">
         <TopBar
-          domain={data.domain}
-          scannedAt={formatTimeAgo(data.scannedAt)}
-          shareId={data.shareId}
-          onRescan={() => window.location.reload()}
+          domain={mergedData.domain}
+          scannedAt={formatTimeAgo(mergedData.scannedAt)}
+          shareId={mergedData.shareId}
+          onRescan={handleRescan}
         />
         <div className="mt-4">
-          <HeroBand result={data} />
+          <HeroBand result={mergedData} />
         </div>
+        {isPendingSSL && (
+          <div className="mt-3 flex items-center gap-2 text-sm text-teal-600 dark:text-teal-400">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Running deep SSL analysis in background...</span>
+          </div>
+        )}
         <div className="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="lg:col-span-2 space-y-4">
-            <CertChain chain={data.chain} />
-            <ProtocolTable protocols={data.protocols} />
+            <CertChain chain={mergedData.chain} />
+            <ProtocolTable protocols={mergedData.protocols} />
             <CipherSuites cipherSuites={displayCipherSuites} />
-            <VulnPanel vulnerabilities={data.vulnerabilities} />
+            <VulnPanel vulnerabilities={mergedData.vulnerabilities} />
           </div>
           <div className="space-y-4">
-            <ExpiryCountdown chain={data.chain} />
-            <SecurityHeaders headers={data.headers} />
-            <CertDetails chain={data.chain} />
+            <ExpiryCountdown chain={mergedData.chain} />
+            <SecurityHeaders headers={mergedData.headers} />
+            <CertDetails chain={mergedData.chain} />
             <LearnMore />
           </div>
         </div>
