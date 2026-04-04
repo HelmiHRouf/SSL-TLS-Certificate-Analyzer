@@ -1,0 +1,34 @@
+---
+title: POODLE
+slug: poodle
+category: Protocol Attacks
+difficulty: Beginner
+cve: CVE-2014-3566
+summary: SSL 3.0 padding oracle attack that decrypts HTTPS traffic.
+---
+
+# POODLE Attack
+
+POODLE (Padding Oracle On Downgraded Legacy Encryption) is a vulnerability that allows attackers to decrypt HTTPS traffic by exploiting a flaw in SSL 3.0's padding mechanism.
+
+## How It Works
+
+SSL 3.0 uses a block cipher padding scheme that doesn't properly validate padding bytes. An attacker can:
+1. Force a connection downgrade to SSL 3.0
+2. Position themselves as a man-in-the-middle
+3. Send modified requests and observe server responses
+4. Gradually decrypt sensitive data byte by byte
+
+## Why It Matters
+
+Even though modern browsers support TLS 1.2+, many servers still accept SSL 3.0 connections for compatibility. This allows attackers to force vulnerable connections.
+
+## How to Fix
+
+1. **Disable SSL 3.0** entirely on your server
+2. **Enable TLS_FALLBACK_SCSV** to prevent protocol downgrade attacks
+3. **Monitor for downgrade attempts** in your logs
+
+## CertLens Detection
+
+Our scan detects if your server accepts SSL 3.0 connections and flags it as a critical vulnerability.

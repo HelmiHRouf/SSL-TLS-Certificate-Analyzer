@@ -1,0 +1,38 @@
+---
+title: Heartbleed
+slug: heartbleed
+category: Protocol Attacks
+difficulty: Intermediate
+cve: CVE-2014-0160
+summary: OpenSSL buffer over-read exposing private keys and passwords.
+---
+
+# Heartbleed Vulnerability
+
+Heartbleed is a catastrophic vulnerability in OpenSSL that allowed attackers to read sensitive memory from vulnerable servers, including private keys, passwords, and session cookies.
+
+## How It Works
+
+The Heartbeat extension in OpenSSL (versions 1.0.1 through 1.0.1f) contained a buffer over-read bug:
+
+1. A client sends a heartbeat request with a payload
+2. The server is supposed to echo the payload back
+3. Due to a missing bounds check, the server could return up to 64KB of memory
+4. This memory could contain private keys, session data, passwords, or any data in the server's memory
+
+## Why It Matters
+
+- **Private key exposure**: Attackers could steal your certificate's private key
+- **Credential theft**: Usernames, passwords, and session tokens could be leaked
+- **Perfect forward secrecy compromised**: Past sessions could be decrypted
+
+## How to Fix
+
+1. **Update OpenSSL** to version 1.0.1g or later (or 1.0.2+)
+2. **Revoke and reissue certificates** if your server was vulnerable
+3. **Force password resets** for all users
+4. **Invalidate all sessions** and require re-authentication
+
+## CertLens Detection
+
+Our scan tests for the Heartbeat extension and verifies your OpenSSL version isn't vulnerable.

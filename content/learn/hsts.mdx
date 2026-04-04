@@ -1,0 +1,55 @@
+---
+title: HSTS
+slug: hsts
+category: Header Hardening
+difficulty: Beginner
+summary: Force HTTPS permanently and prevent protocol downgrade attacks.
+---
+
+# HTTP Strict Transport Security (HSTS)
+
+HSTS tells browsers to always use HTTPS for your domain, preventing downgrade attacks and mixed content issues.
+
+## What HSTS Does
+
+When a browser sees the HSTS header:
+1. It remembers your site requires HTTPS
+2. It automatically upgrades all HTTP links to HTTPS
+3. It prevents users from bypassing certificate warnings
+4. It blocks mixed content (HTTP resources on HTTPS pages)
+
+## The Header
+
+```
+Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+```
+
+### Directives
+
+- **max-age** (required): Seconds to remember the policy (1 year = 31,536,000)
+- **includeSubDomains** (optional): Apply to all subdomains
+- **preload** (optional): Opt-in to browser preload list
+
+## Why It Matters
+
+- **Prevents SSL stripping**: Attackers can't downgrade to HTTP
+- **Stops mixed content**: Browsers block insecure resources
+- **Improves security**: No certificate warning bypasses possible
+
+## Preloading
+
+Submit your site to the [HSTS preload list](https://hstspreload.org/) to be included in browsers. Requirements:
+- HTTPS on root domain and all subdomains
+- `max-age >= 10886400` (126 days)
+- `includeSubDomains` directive
+- `preload` directive
+
+## Common Mistakes
+
+- **Short max-age**: Should be at least 1 year
+- **Missing subdomains**: If you have subdomains, use `includeSubDomains`
+- **Not ready for preload**: Can't easily remove once preloaded
+
+## CertLens Detection
+
+Our scan checks for HSTS header presence and proper configuration.

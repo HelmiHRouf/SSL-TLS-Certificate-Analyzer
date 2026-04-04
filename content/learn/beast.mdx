@@ -1,0 +1,33 @@
+---
+title: BEAST
+slug: beast
+category: Protocol Attacks
+difficulty: Intermediate
+cve: CVE-2011-3389
+summary: CBC mode block cipher attack against TLS 1.0.
+---
+
+# BEAST Attack
+
+BEAST (Browser Exploit Against SSL/TLS) is a chosen plaintext attack against SSL/TLS when using Cipher Block Chaining (CBC) mode with TLS 1.0.
+
+## How It Works
+
+1. The attacker has a man-in-the-middle position
+2. They can inject partial plaintext into the encrypted stream
+3. By observing how the encrypted blocks change, they can gradually recover plaintext
+4. The attack exploits predictable IV (initialization vector) generation in TLS 1.0
+
+## Why It Matters
+
+While modern browsers have mitigations in place, servers still supporting TLS 1.0 are vulnerable to this attack if an attacker can inject JavaScript into the victim's browser.
+
+## How to Fix
+
+1. **Disable TLS 1.0** and enable TLS 1.2 or higher
+2. **Enable TLS 1.3** for the best security
+3. **Use AES-GCM cipher suites** instead of CBC mode
+
+## CertLens Detection
+
+Our scan identifies if your server supports TLS 1.0 and recommends upgrading to TLS 1.2+.

@@ -1,0 +1,37 @@
+---
+title: ROBOT
+slug: robot
+category: Protocol Attacks
+difficulty: Advanced
+cve: CVE-2017-13099, CVE-2017-17427, CVE-2017-17428
+summary: RSA decryption oracle allowing server impersonation.
+---
+
+# ROBOT Attack
+
+ROBOT (Return Of Bleichenbacher's Oracle Threat) revives a 19-year-old vulnerability in RSA encryption that allows attackers to decrypt traffic and impersonate servers.
+
+## How It Works
+
+ROBOT exploits the RSA key exchange mechanism in TLS:
+
+1. The Bleichenbacher oracle technique is used to detect RSA decryption errors
+2. By sending specially crafted ciphertext, attackers can determine if padding is valid
+3. This oracle leaks information that eventually reveals the decrypted pre-master secret
+4. With enough requests, the attacker can decrypt session keys or forge signatures
+
+## Why It Matters
+
+- **Session decryption**: Attackers can passively decrypt recorded traffic
+- **Signature forgery**: Attackers could impersonate your server
+- **Affects many implementations**: Major vendors were found vulnerable in 2017
+
+## How to Fix
+
+1. **Disable RSA key exchange** entirely (use ECDHE or DHE instead)
+2. **Enable perfect forward secrecy** with ephemeral key exchanges
+3. **Update TLS libraries** to patched versions
+
+## CertLens Detection
+
+Our scan detects RSA key exchange configuration and recommends switching to ephemeral Diffie-Hellman.

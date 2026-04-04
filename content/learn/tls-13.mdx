@@ -1,0 +1,42 @@
+---
+title: TLS 1.3
+slug: tls-13
+category: TLS Fundamentals
+difficulty: Beginner
+summary: What changed from TLS 1.2 and why it matters for your users.
+---
+
+# TLS 1.3
+
+TLS 1.3 is the latest version of the Transport Layer Security protocol, bringing significant security and performance improvements over TLS 1.2.
+
+## Key Improvements
+
+### Faster Handshakes
+TLS 1.3 reduces the handshake from 2 round trips to 1 (0-RTT for resumed connections). This means:
+- Faster page loads
+- Better mobile experience
+- Lower latency for APIs
+
+### Removed Legacy Features
+TLS 1.3 removes many outdated and vulnerable features:
+- **No more RSA key exchange** (only ephemeral DH/ECDH)
+- **No more MD5/SHA-1** (only AEAD ciphers)
+- **No more compression** (prevents CRIME attacks)
+- **No more renegotiation** (simpler, safer)
+
+### Perfect Forward Secrecy
+TLS 1.3 mandates ephemeral key exchanges, ensuring that even if your private key is compromised, past sessions cannot be decrypted.
+
+## Migration Benefits
+
+| Feature | TLS 1.2 | TLS 1.3 |
+|---------|---------|---------|
+| Handshake RTT | 2 | 1 (or 0) |
+| Secure by default | No | Yes |
+| Cipher suites | 100+ | 5 (simplified) |
+| Forward secrecy | Optional | Required |
+
+## CertLens Detection
+
+Our scan detects TLS 1.3 support and shows which clients can benefit from the faster, more secure protocol.

@@ -1,0 +1,56 @@
+---
+title: Perfect forward secrecy
+slug: perfect-forward-secrecy
+category: TLS Fundamentals
+difficulty: Intermediate
+summary: Why ephemeral keys mean a compromised private key can't decrypt past sessions.
+---
+
+# Perfect Forward Secrecy
+
+Perfect Forward Secrecy (PFS) ensures that if your server's private key is compromised in the future, past encrypted sessions cannot be decrypted.
+
+## The Problem Without PFS
+
+Traditional RSA key exchange works like this:
+1. Client encrypts a random key with the server's public key
+2. Server decrypts with its private key
+3. Both use this key for the session
+
+**The risk**: If the private key is stolen, an attacker can:
+- Decrypt recorded traffic from any past session
+- Decrypt future traffic
+- Impersonate the server
+
+## How PFS Works
+
+With ephemeral Diffie-Hellman (DHE or ECDHE):
+1. Both parties generate temporary key pairs
+2. They exchange public keys
+3. Both compute the same shared secret using their private keys
+4. **The temporary private keys are discarded after the session**
+5. Even with the server's static private key, past sessions can't be decrypted
+
+## Why It Matters
+
+- **Long-term security**: Compromises today don't affect yesterday's data
+- **Compliance**: Required by many security standards
+- **Privacy**: Protects user data even against nation-state actors
+
+## How to Enable PFS
+
+1. **Use only ephemeral cipher suites**:
+   - `ECDHE` (Elliptic Curve Diffie-Hellman Ephemeral)
+   - `DHE` (Diffie-Hellman Ephemeral)
+
+2. **Disable static RSA cipher suites**:
+   - Remove `TLS_RSA_*` from your configuration
+
+3. **Generate strong DH parameters** (if using DHE):
+   ```bash
+   openssl dhparam -out dhparams.pem 2048
+   ```
+
+## CertLens Detection
+
+Our scan detects which cipher suites support PFS and flags any static RSA configurations.

@@ -1,0 +1,64 @@
+---
+title: Cipher suites
+slug: cipher-suites
+category: TLS Fundamentals
+difficulty: Intermediate
+summary: Decoding cipher suite names - key exchange, auth, encryption, and MAC.
+---
+
+# Cipher Suites
+
+A cipher suite is a set of cryptographic algorithms that TLS uses to secure connections. Understanding them helps you configure your server securely.
+
+## Anatomy of a Cipher Suite
+
+```
+TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+└───┬───┘ └──┬──┘ └─┬─┘ └───┬───┘ └────┬────┘
+  Protocol  Key Ex  Auth  Encryption    MAC
+```
+
+### Components
+
+1. **Key Exchange**: How the session key is established
+   - `ECDHE` - Elliptic Curve Diffie-Hellman Ephemeral (preferred)
+   - `DHE` - Diffie-Hellman Ephemeral
+   - `RSA` - Static RSA (avoid - no forward secrecy)
+
+2. **Authentication**: How the server proves its identity
+   - `RSA` - RSA signatures
+   - `ECDSA` - Elliptic Curve signatures (faster)
+
+3. **Encryption**: How data is encrypted
+   - `AES_128_GCM` - AES-128 in Galois/Counter Mode
+   - `AES_256_CBC` - AES-256 in Cipher Block Chaining mode (avoid)
+   - `CHACHA20_POLY1305` - Modern, fast, secure
+
+4. **MAC/Hash**: For integrity verification
+   - `SHA256` - Secure hash
+   - `SHA384` - Higher security
+   - `SHA` or `MD5` - Avoid (deprecated)
+
+## Recommended Cipher Suites
+
+**Modern (TLS 1.3)**:
+- `TLS_AES_128_GCM_SHA256`
+- `TLS_AES_256_GCM_SHA384`
+- `TLS_CHACHA20_POLY1305_SHA256`
+
+**Interoperable (TLS 1.2)**:
+- `ECDHE-RSA-AES128-GCM-SHA256`
+- `ECDHE-RSA-AES256-GCM-SHA384`
+- `ECDHE-RSA-CHACHA20-POLY1305`
+
+## What to Avoid
+
+- CBC mode (BEAST, Lucky13 attacks)
+- RC4 (broken)
+- 3DES (Sweet32 attack)
+- Static RSA (no forward secrecy)
+- Export ciphers (deliberately weak)
+
+## CertLens Detection
+
+Our scan lists all supported cipher suites, color-coding them by security strength.

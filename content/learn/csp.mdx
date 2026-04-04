@@ -1,0 +1,77 @@
+---
+title: Content Security Policy
+slug: csp
+category: Header Hardening
+difficulty: Advanced
+summary: Restrict what scripts, styles, and resources can load on your page.
+---
+
+# Content Security Policy (CSP)
+
+CSP is a powerful security header that prevents XSS attacks, clickjacking, and data injection by controlling what resources can execute on your pages.
+
+## What CSP Blocks
+
+Without CSP, an attacker who injects script can:
+- Steal cookies and session tokens
+- Keylog user input
+- Deface your site
+- Redirect users to malicious sites
+
+With CSP, injected code won't execute because it's not from an approved source.
+
+## Basic CSP Header
+
+```
+Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https:; font-src 'self';
+```
+
+## Key Directives
+
+| Directive | Controls |
+|-----------|----------|
+| `default-src` | Fallback for other directives |
+| `script-src` | JavaScript sources |
+| `style-src` | CSS sources |
+| `img-src` | Image sources |
+| `font-src` | Font sources |
+| `connect-src` | AJAX, WebSocket, fetch() |
+| `frame-src` | Frame/iframe sources |
+| `object-src` | Flash, Java applets (usually 'none') |
+
+## Source Values
+
+- `'self'` - Same origin only
+- `'none'` - Nothing allowed
+- `'unsafe-inline'` - Inline scripts/styles (avoid if possible)
+- `'unsafe-eval'` - eval() and similar (avoid)
+- `https:` - Any HTTPS source
+- `https://example.com` - Specific domain
+- `'nonce-abc123'` - Scripts with matching nonce
+
+## Strict Policy Example
+
+```
+Content-Security-Policy: 
+  default-src 'self';
+  script-src 'self' 'nonce-random123';
+  style-src 'self';
+  img-src 'self' https: data:;
+  font-src 'self';
+  frame-src 'none';
+  object-src 'none';
+  base-uri 'self';
+  form-action 'self';
+```
+
+## Testing CSP
+
+Start with `Content-Security-Policy-Report-Only` to monitor violations without blocking:
+
+```
+Content-Security-Policy-Report-Only: default-src 'self'; report-uri /csp-report
+```
+
+## CertLens Detection
+
+Our scan checks for CSP presence and flags dangerous configurations like `unsafe-inline` without nonces.

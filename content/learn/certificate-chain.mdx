@@ -1,0 +1,56 @@
+---
+title: Certificate chain
+slug: certificate-chain
+category: TLS Fundamentals
+difficulty: Beginner
+summary: How root CAs, intermediates, and leaf certificates form a trust hierarchy.
+---
+
+# Certificate Chain
+
+A certificate chain (also called the certificate path) establishes trust from a trusted root authority down to your server's certificate.
+
+## The Chain of Trust
+
+```
+Root CA (self-signed, built into browsers)
+    ↓
+Intermediate CA (signed by root)
+    ↓
+Intermediate CA (optional, signed by intermediate)
+    ↓
+Leaf Certificate (your server's certificate)
+```
+
+## Each Link in the Chain
+
+### Root Certificate Authority
+- Self-signed certificates built into operating systems and browsers
+- Examples: DigiCert, Let's Encrypt, GlobalSign
+- Maximum trust - compromise would affect millions of sites
+
+### Intermediate Certificates
+- Issued by root CAs to intermediate authorities
+- Can be multiple levels deep
+- Used to protect root keys (roots are kept offline)
+
+### Leaf Certificate
+- Your server's certificate
+- Issued for a specific domain or set of domains (Subject Alternative Names)
+- Contains public key, validity period, and usage constraints
+
+## Why the Chain Matters
+
+- **Trust validation**: Browsers verify the entire path to a trusted root
+- **Expiry handling**: Each certificate has its own expiration date
+- **Revocation**: Any certificate in the chain can be revoked
+
+## Common Issues
+
+- **Missing intermediate**: Server must send the full chain, not just the leaf
+- **Expired root**: Old clients may not have new root certificates
+- **Self-signed**: Not trusted by browsers without manual installation
+
+## CertLens Detection
+
+Our scan validates your certificate chain from leaf to root, checking for completeness and trust.
