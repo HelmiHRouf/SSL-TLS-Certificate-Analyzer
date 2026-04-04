@@ -26,17 +26,11 @@ const domainSchema = z.object({
   force: z.boolean().optional().default(false),
 });
 
-// Placeholder protocol check — will be replaced with actual TLS version detection
+// Real protocol detection using TLS connections
 async function detectProtocols(domain: string): Promise<ProtocolSupport[]> {
-  // For now, return optimistic defaults
-  // Phase 4 will integrate SSL Labs for real protocol detection
-  return [
-    { version: "TLS 1.3", supported: true, risk: "none" },
-    { version: "TLS 1.2", supported: true, risk: "none" },
-    { version: "TLS 1.1", supported: false, risk: "low" },
-    { version: "TLS 1.0", supported: false, risk: "high" },
-    { version: "SSL 3.0", supported: false, risk: "high" },
-  ];
+  // Import the actual detection function from tls.ts
+  const { detectProtocols: tlsDetect } = await import("@/lib/tls");
+  return tlsDetect(domain);
 }
 
 // Placeholder vulnerabilities — will be replaced with SSL Labs data

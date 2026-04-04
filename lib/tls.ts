@@ -1,6 +1,7 @@
 import tls from "tls";
 import dns from "dns/promises";
-import type { ChainEntry } from "@/types/cert";
+import type { ChainEntry, ProtocolSupport } from "@/types/cert";
+import { constants } from "crypto";
 
 // Private IP ranges to block (SSRF protection)
 const PRIVATE_IP_PATTERNS = [
@@ -201,4 +202,101 @@ function parseCertEntry(
     isExpired,
     role,
   };
+}
+
+// SSL/TLS version constants for protocol detection
+const SSL3_HEADER = Buffer.from([0x16, 0x03, 0x00]); // SSL 3.0 record header
+
+// Protocol detection by attempting connections with specific versions
+export async function detectProtocols(domain: string): Promise<ProtocolSupport[]> {
+  const protocols: ProtocolSupport[] = [
+    { version: "TLS 1.3", supported: false, risk: "none" },
+    { version: "TLS 1.2", supported: false, risk: "none" },
+    { version: "TLS 1.1", supported: false, risk: "low" },
+    { version: "TLS 1.0", supported: false, risk: "high" },
+    { version: "SSL 3.0", supported: false, risk: "high" },
+  ];
+
+  const DETECTION_TIMEOUT = 5000; // 5s timeout per protocol test
+
+  // Test each protocol version
+  const tests = protocols.map(async (proto) => {
+    const supported = await testProtocolVersion(domain, proto.version, DETECTION_TIMEOUT);
+    proto.supported = supported;
+    return proto;
+  });
+
+  await Promise.all(tests);
+  return protocols;
+}
+
+async function testProtocolVersion(
+  domain: string,
+  version: string,
+  timeout: number,
+): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = tls.connect(
+      {
+        host: domain,
+        port: 443,
+        servername: domain,
+        rejectUnauthorized: false,
+        timeout,
+        // Map version string to secureOptions
+        secureOptions: getSecureOptionsForVersion(version),
+      },
+      () => {
+        // Get the negotiated protocol
+        const negotiated = socket.getProtocol();
+        socket.destroy();
+
+        // Check if the negotiated protocol matches what we expected
+        const expectedProto = versionToProtocolString(version);
+        resolve(negotiated === expectedProto);
+      },
+    );
+
+    socket.on("error", () => {
+      resolve(false);
+    });
+
+    socket.on("timeout", () => {
+      socket.destroy();
+      resolve(false);
+    });
+  });
+}
+
+function getSecureOptionsForVersion(version: string): number | undefined {
+  // Use OpenSSL constants to force specific TLS versions
+  // SSL_OP_NO_TLSv1_2 etc. are negative flags (disabling higher versions)
+  switch (version) {
+    case "SSL 3.0":
+      return constants.SSL_OP_NO_TLSv1 | constants.SSL_OP_NO_TLSv1_1 |
+             constants.SSL_OP_NO_TLSv1_2 | constants.SSL_OP_NO_TLSv1_3;
+    case "TLS 1.0":
+      return constants.SSL_OP_NO_TLSv1_1 | constants.SSL_OP_NO_TLSv1_2 |
+             constants.SSL_OP_NO_TLSv1_3;
+    case "TLS 1.1":
+      return constants.SSL_OP_NO_TLSv1_2 | constants.SSL_OP_NO_TLSv1_3;
+    case "TLS 1.2":
+      return constants.SSL_OP_NO_TLSv1_3;
+    case "TLS 1.3":
+      // No options needed - TLS 1.3 is the default
+      return undefined;
+    default:
+      return undefined;
+  }
+}
+
+function versionToProtocolString(version: string): string | null {
+  const mapping: Record<string, string> = {
+    "SSL 3.0": "SSLv3",
+    "TLS 1.0": "TLSv1",
+    "TLS 1.1": "TLSv1.1",
+    "TLS 1.2": "TLSv1.2",
+    "TLS 1.3": "TLSv1.3",
+  };
+  return mapping[version] || null;
 }
