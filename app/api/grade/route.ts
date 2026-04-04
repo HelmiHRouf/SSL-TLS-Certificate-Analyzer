@@ -23,16 +23,36 @@ export async function GET(req: Request) {
 
     const { domain: validDomain } = parsed.data;
 
-    // Poll SSL Labs for scan status
-    const sslLabsResult = await getScanStatus(validDomain);
+    // Get cached scan result first (needed for fallback)
+    const cached = await getCache(validDomain);
 
-    if ("status" in sslLabsResult && sslLabsResult.status === "pending") {
-      // Scan still in progress
+    // Poll SSL Labs for scan status
+    let sslLabsResult;
+    try {
+      sslLabsResult = await getScanStatus(validDomain);
+    } catch (sslErr) {
+      // SSL Labs API error — return fallback with local data
+      if (cached) {
+        return NextResponse.json({
+          ...cached,
+          sslLabsStatus: "unavailable",
+        });
+      }
+      return NextResponse.json(
+        { error: "SSL Labs unavailable and no cached data", status: "error" },
+        { status: 503 }
+      );
+    }
+
+    // Check if scan is still pending (narrow type first)
+    const isPending = "status" in sslLabsResult && sslLabsResult.status === "pending";
+    if (isPending) {
       return NextResponse.json({ status: "pending" });
     }
 
-    // Scan is ready — get the first endpoint
-    const endpoint = sslLabsResult.endpoints?.[0];
+    // At this point TypeScript knows it's SSLLabsResult
+    const result = sslLabsResult as Exclude<typeof sslLabsResult, { status: "pending" }>;
+    const endpoint = result.endpoints?.[0];
     if (!endpoint) {
       return NextResponse.json(
         { error: "No endpoint data available" },
@@ -40,8 +60,7 @@ export async function GET(req: Request) {
       );
     }
 
-    // Get cached scan result to merge with SSL Labs data
-    const cached = await getCache(validDomain);
+    // Use cached result as base for merging
     const baseResult: Partial<ScanResult> = cached || {
       domain: validDomain,
       chain: [],
@@ -54,7 +73,7 @@ export async function GET(req: Request) {
     const updatedResult: ScanResult = {
       ...baseResult,
       domain: validDomain,
-      grade: getGrade(sslLabsResult.endpoints) || baseResult.grade || "B",
+      grade: getGrade(result.endpoints) || baseResult.grade || "B",
       protocols: mapProtocols(endpoint.details?.protocolSupport),
       cipherSuites: mapCipherSuites(endpoint.details?.suites),
       vulnerabilities: mapVulnerabilities(endpoint.details),

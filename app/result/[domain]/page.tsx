@@ -113,7 +113,7 @@ export default function ResultPage() {
     queryFn: () => analyzeDomain(domain, rescanKey > 0),
     enabled: !!domain,
     retry: 1,
-    staleTime: 0,
+    // Uses QueryProvider defaults: staleTime 1min, no refetch on focus
   });
 
   // Poll SSL Labs grade every 5 seconds until ready

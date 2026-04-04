@@ -49,18 +49,47 @@ export interface SSLLabsResult {
 /**
  * Start a new SSL Labs scan (fire-and-forget)
  * Returns immediately — the scan runs asynchronously
+ * Uses fromCache=on first to avoid overloading the API
  */
 export async function startScan(domain: string): Promise<void> {
   const url = new URL(`${SSL_LABS_API_BASE}/analyze`);
   url.searchParams.set("host", domain);
-  url.searchParams.set("startNew", "on");
   url.searchParams.set("publish", "off");
   url.searchParams.set("ignoreMismatch", "on");
   url.searchParams.set("all", "done");
 
+  // First, try fromCache=on to see if there's already a cached result
+  // This avoids creating new scans for domains recently scanned
+  const cacheUrl = new URL(url.toString());
+  cacheUrl.searchParams.set("fromCache", "on");
+
+  const cacheResponse = await fetch(cacheUrl.toString());
+  if (cacheResponse.ok) {
+    const cacheData: SSLLabsResult = await cacheResponse.json();
+    // If we have a READY cached result, no need to start a new scan
+    if (cacheData.status === "READY") {
+      return;
+    }
+    // If there's an in-progress scan, just wait for it
+    if (cacheData.status === "IN_PROGRESS") {
+      return;
+    }
+  }
+
+  // No cached result, start fresh scan
+  url.searchParams.set("startNew", "on");
+
   const response = await fetch(url.toString());
   if (!response.ok) {
     const body = await response.text().catch(() => "");
+    // 529 = API at capacity — this is expected, log as warning not error
+    if (response.status === 529) {
+      console.warn(
+        `SSL Labs API at capacity (529) for ${domain}. Falling back to local analysis.`
+      );
+      return;
+    }
+    // Other errors still logged
     console.error(
       "Failed to start SSL Labs scan:",
       response.status,
