@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getScanStatus, mapProtocols, mapCipherSuites, mapVulnerabilities, getGrade } from "@/lib/ssllabs";
 import { getCache, setCache } from "@/lib/cache";
+import { gradeLimiter, getIP } from "@/lib/ratelimit";
 import type { ScanResult } from "@/types/cert";
 
 const querySchema = z.object({
@@ -10,6 +11,29 @@ const querySchema = z.object({
 
 export async function GET(req: Request) {
   try {
+    // Apply rate limiting
+    const ip = getIP(req);
+    const { success, limit, remaining, reset } = await gradeLimiter.limit(ip);
+    
+    if (!success) {
+      return NextResponse.json(
+        { 
+          error: "Rate limit exceeded", 
+          limit,
+          remaining: 0,
+          reset: new Date(reset).toISOString(),
+        },
+        { 
+          status: 429,
+          headers: {
+            "X-RateLimit-Limit": String(limit),
+            "X-RateLimit-Remaining": String(0),
+            "X-RateLimit-Reset": String(Math.ceil(reset / 1000)),
+          },
+        }
+      );
+    }
+
     const { searchParams } = new URL(req.url);
     const domain = searchParams.get("domain");
 
