@@ -23,11 +23,14 @@ export async function GET() {
     `);
 
     // Format time ago
-    const formatted = recentScans.rows.map((scan: { domain: string; grade: string; scannedAt: Date }) => ({
-      domain: scan.domain,
-      grade: scan.grade,
-      timeAgo: formatTimeAgo(new Date(scan.scannedAt)),
-    }));
+    const formatted = recentScans.rows.map((row) => {
+      const scan = row as { domain: string; grade: string; scannedAt: string };
+      return {
+        domain: scan.domain,
+        grade: scan.grade,
+        timeAgo: formatTimeAgo(new Date(scan.scannedAt)),
+      };
+    });
 
     return NextResponse.json(formatted);
   } catch (err) {
