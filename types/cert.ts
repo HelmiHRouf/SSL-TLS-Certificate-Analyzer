@@ -3,6 +3,9 @@ export type Grade = "A+" | "A" | "B" | "C" | "F";
 export interface CertInfo {
   subject: string;
   issuer: string;
+  locality?: string;
+  state?: string;
+  country?: string;
   validFrom: string;
   validTo: string;
   daysRemaining: number;

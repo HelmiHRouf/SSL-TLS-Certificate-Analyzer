@@ -126,6 +126,9 @@ function parseCertEntry(
 ): ChainEntry {
   const subject = String(cert.subject?.CN || cert.subject?.O || "Unknown");
   const issuer = String(cert.issuer?.CN || cert.issuer?.O || "Unknown");
+  const locality = cert.subject?.L ? String(cert.subject.L) : undefined;
+  const state = cert.subject?.ST ? String(cert.subject.ST) : undefined;
+  const country = cert.subject?.C ? String(cert.subject.C) : undefined;
 
   // Parse dates
   const validFrom = cert.valid_from
@@ -199,6 +202,9 @@ function parseCertEntry(
   return {
     subject,
     issuer,
+    locality,
+    state,
+    country,
     validFrom,
     validTo,
     daysRemaining,

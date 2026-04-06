@@ -24,6 +24,9 @@ export function CertDetails({ chain }: CertDetailsProps) {
     { label: "SANs", value: `${leaf.sans.length} domains` },
     { label: "Wildcard", value: leaf.isWildcard ? "Yes" : "No" },
     { label: "Self-signed", value: leaf.isSelfSigned ? "Yes" : "No" },
+    { label: "Locality", value: leaf.locality || "—" },
+    { label: "State", value: leaf.state || "—" },
+    { label: "Country", value: leaf.country || "—" },
   ];
 
   const handleCopy = async () => {
