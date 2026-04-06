@@ -10,25 +10,38 @@ import { desc, sql } from "drizzle-orm";
  */
 export async function GET() {
   try {
-    // Get recent scans, deduplicated by domain
-    // Using DISTINCT ON for Postgres to get only the latest scan per domain
+    // Get 5 most recent unique scans by domain
+    // Subquery gets latest scan per domain, outer query sorts by time
     const recentScans = await db.execute(sql`
-      SELECT DISTINCT ON (domain) 
-        domain, 
-        grade, 
-        scanned_at as "scannedAt"
-      FROM scans
-      ORDER BY domain, scanned_at DESC
+      WITH latest_scans AS (
+        SELECT DISTINCT ON (domain) 
+          domain, 
+          grade, 
+          scanned_at
+        FROM scans
+        ORDER BY domain, scanned_at DESC
+      )
+      SELECT domain, grade, scanned_at as "scannedAt"
+      FROM latest_scans
+      ORDER BY scanned_at DESC
       LIMIT 5
     `);
 
+    // Handle empty results
+    if (!recentScans.rows || recentScans.rows.length === 0) {
+      return NextResponse.json([]);
+    }
+
     // Format time ago
     const formatted = recentScans.rows.map((row) => {
-      const scan = row as { domain: string; grade: string; scannedAt: string };
+      const scan = row as { domain: string; grade: string; scannedAt: string | Date };
+      const scannedAtStr = typeof scan.scannedAt === 'string' 
+        ? scan.scannedAt 
+        : (scan.scannedAt as unknown as { toISOString: () => string }).toISOString?.() || String(scan.scannedAt);
       return {
         domain: scan.domain,
         grade: scan.grade,
-        timeAgo: formatTimeAgo(new Date(scan.scannedAt)),
+        timeAgo: formatTimeAgo(new Date(scannedAtStr)),
       };
     });
 

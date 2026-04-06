@@ -38,10 +38,20 @@ export function RecentLookups() {
         const res = await fetch("/api/scans/recent");
         if (res.ok) {
           const data = await res.json();
-          setLookups(data);
+          // Handle both array response and error response
+          if (Array.isArray(data)) {
+            setLookups(data);
+          } else {
+            console.error("Invalid response from /api/scans/recent:", data);
+            setLookups([]);
+          }
+        } else {
+          console.error("Failed to fetch recent scans:", res.status);
+          setLookups([]);
         }
-      } catch {
-        // Silently fail - section won't show if empty
+      } catch (err) {
+        console.error("Error fetching recent scans:", err);
+        setLookups([]);
       } finally {
         setLoading(false);
       }
