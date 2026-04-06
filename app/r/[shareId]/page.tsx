@@ -13,6 +13,7 @@ import { VulnPanel } from "@/components/results/VulnPanel";
 import { CipherSuites } from "@/components/results/CipherSuites";
 import { CertDetails } from "@/components/results/CertDetails";
 import { LearnMore } from "@/components/results/LearnMore";
+import { TimeDisplay } from "@/components/TimeDisplay";
 import { AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -25,16 +26,6 @@ interface PageProps {
 
 // Revalidate every hour to check for expired scans
 export const revalidate = 3600;
-
-function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "numeric",
-    minute: "numeric",
-  }).format(date);
-}
 
 export default async function SharedScanPage({ params }: PageProps) {
   const { shareId } = params;
@@ -91,7 +82,7 @@ export default async function SharedScanPage({ params }: PageProps) {
         <div className="mb-4 px-4 py-3 bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 rounded-lg">
           <div className="flex items-center justify-between">
             <p className="text-sm text-teal-800 dark:text-teal-200">
-              <span className="font-medium">Scanned on {formatDate(scannedAt)}</span>
+              <span className="font-medium">Scanned on <TimeDisplay date={scannedAt.toISOString()} /></span>
               <span className="text-teal-600 dark:text-teal-400 ml-2">
                 — Run a fresh scan for current results
               </span>
