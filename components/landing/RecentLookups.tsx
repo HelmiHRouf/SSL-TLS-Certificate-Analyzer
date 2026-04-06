@@ -11,14 +11,6 @@ interface Lookup {
   timeAgo: string;
 }
 
-// Mock data for recent lookups
-const MOCK_LOOKUPS: Lookup[] = [
-  { domain: "github.com", grade: "A+", timeAgo: "2 min ago" },
-  { domain: "expired.badssl.com", grade: "F", timeAgo: "18 min ago" },
-  { domain: "api.stripe.com", grade: "A+", timeAgo: "1 hr ago" },
-  { domain: "old-bank.example.com", grade: "B", timeAgo: "3 hr ago" },
-];
-
 function getGradeColor(grade: string): string {
   switch (grade) {
     case "A+":
@@ -37,31 +29,28 @@ function getGradeColor(grade: string): string {
 export function RecentLookups() {
   const router = useRouter();
   const [lookups, setLookups] = useState<Lookup[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Try to get from localStorage, fallback to mock data
-    try {
-      const stored = localStorage.getItem("certlens-recent-lookups");
-      if (stored) {
-        setLookups(JSON.parse(stored));
-      } else {
-        setLookups(MOCK_LOOKUPS);
+    // Fetch real recent scans from the database
+    async function fetchRecent() {
+      try {
+        const res = await fetch("/api/scans/recent");
+        if (res.ok) {
+          const data = await res.json();
+          setLookups(data);
+        }
+      } catch {
+        // Silently fail - section won't show if empty
+      } finally {
+        setLoading(false);
       }
-    } catch {
-      setLookups(MOCK_LOOKUPS);
     }
+
+    fetchRecent();
   }, []);
 
-  const clearHistory = () => {
-    setLookups([]);
-    try {
-      localStorage.removeItem("certlens-recent-lookups");
-    } catch {
-      // ignore
-    }
-  };
-
-  if (lookups.length === 0) {
+  if (lookups.length === 0 || loading) {
     return null;
   }
 
@@ -71,14 +60,9 @@ export function RecentLookups() {
         <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
           Recent lookups
         </span>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={clearHistory}
-          className="h-7 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-        >
-          Clear history
-        </Button>
+        <span className="text-xs text-gray-400 dark:text-gray-500">
+          Community activity
+        </span>
       </div>
       <div className="space-y-2">
         {lookups.map((lookup) => (
