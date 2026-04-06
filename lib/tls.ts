@@ -187,6 +187,15 @@ function parseCertEntry(
   // Expired check
   const isExpired = expiry ? expiry < now : false;
 
+  // Extract raw certificate PEM for advanced inspection
+  let rawPem: string | undefined;
+  if (cert.raw && Buffer.isBuffer(cert.raw)) {
+    const base64 = cert.raw.toString("base64");
+    // Chunk into 64-character lines for standard PEM format
+    const chunks = base64.match(/.{1,64}/g) || [base64];
+    rawPem = `-----BEGIN CERTIFICATE-----\n${chunks.join("\n")}\n-----END CERTIFICATE-----`;
+  }
+
   return {
     subject,
     issuer,
@@ -201,6 +210,7 @@ function parseCertEntry(
     isSelfSigned,
     isExpired,
     role,
+    rawPem,
   };
 }
 

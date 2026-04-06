@@ -13,6 +13,7 @@ export interface CertInfo {
   isWildcard: boolean;
   isSelfSigned: boolean;
   isExpired: boolean;
+  rawPem?: string; // Full certificate in PEM format (for advanced users)
 }
 
 export interface ChainEntry extends CertInfo {
