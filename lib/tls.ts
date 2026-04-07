@@ -1,7 +1,7 @@
 import tls from "tls";
+import net from "net";
 import dns from "dns/promises";
 import type { ChainEntry, ProtocolSupport } from "@/types/cert";
-import { constants } from "crypto";
 
 // Private IP ranges to block (SSRF protection)
 const PRIVATE_IP_PATTERNS = [
@@ -220,35 +220,35 @@ function parseCertEntry(
   };
 }
 
-// SSL/TLS version constants for protocol detection
-const SSL3_HEADER = Buffer.from([0x16, 0x03, 0x00]); // SSL 3.0 record header
-
-// Protocol detection by attempting connections with specific versions
+// Protocol detection by attempting connections with specific pinned versions.
+// Uses minVersion + maxVersion (Node.js ≥ 10.16) instead of the legacy
+// secureOptions bit-flags, which are unreliable across OpenSSL versions.
+// SSL 3.0 is probed separately via a raw TCP hand-crafted ClientHello because
+// OpenSSL 1.1+ removed SSL 3.0 from its TLS stack entirely.
 export async function detectProtocols(domain: string): Promise<ProtocolSupport[]> {
-  const protocols: ProtocolSupport[] = [
-    { version: "TLS 1.3", supported: false, risk: "none" },
-    { version: "TLS 1.2", supported: false, risk: "none" },
-    { version: "TLS 1.1", supported: false, risk: "low" },
-    { version: "TLS 1.0", supported: false, risk: "high" },
-    { version: "SSL 3.0", supported: false, risk: "high" },
+  const DETECTION_TIMEOUT = 5000;
+
+  const [tls13, tls12, tls11, tls10, ssl30] = await Promise.all([
+    testProtocolVersion(domain, "TLSv1.3", "TLSv1.3", DETECTION_TIMEOUT),
+    testProtocolVersion(domain, "TLSv1.2", "TLSv1.2", DETECTION_TIMEOUT),
+    testProtocolVersion(domain, "TLSv1.1", "TLSv1.1", DETECTION_TIMEOUT),
+    testProtocolVersion(domain, "TLSv1",   "TLSv1",   DETECTION_TIMEOUT),
+    probeSSL30(domain, DETECTION_TIMEOUT),
+  ]);
+
+  return [
+    { version: "TLS 1.3", supported: tls13,  risk: "none" },
+    { version: "TLS 1.2", supported: tls12,  risk: "none" },
+    { version: "TLS 1.1", supported: tls11,  risk: "low"  },
+    { version: "TLS 1.0", supported: tls10,  risk: "high" },
+    { version: "SSL 3.0", supported: ssl30,  risk: "high" },
   ];
-
-  const DETECTION_TIMEOUT = 5000; // 5s timeout per protocol test
-
-  // Test each protocol version
-  const tests = protocols.map(async (proto) => {
-    const supported = await testProtocolVersion(domain, proto.version, DETECTION_TIMEOUT);
-    proto.supported = supported;
-    return proto;
-  });
-
-  await Promise.all(tests);
-  return protocols;
 }
 
 async function testProtocolVersion(
   domain: string,
-  version: string,
+  minVersion: tls.SecureVersion,
+  maxVersion: tls.SecureVersion,
   timeout: number,
 ): Promise<boolean> {
   return new Promise((resolve) => {
@@ -259,60 +259,89 @@ async function testProtocolVersion(
         servername: domain,
         rejectUnauthorized: false,
         timeout,
-        // Map version string to secureOptions
-        secureOptions: getSecureOptionsForVersion(version),
+        minVersion,
+        maxVersion,
       },
       () => {
-        // Get the negotiated protocol
-        const negotiated = socket.getProtocol();
+        // Connection callback fires only when the TLS handshake succeeded,
+        // meaning the server genuinely supports this pinned version.
         socket.destroy();
-
-        // Check if the negotiated protocol matches what we expected
-        const expectedProto = versionToProtocolString(version);
-        resolve(negotiated === expectedProto);
+        resolve(true);
       },
     );
 
-    socket.on("error", () => {
-      resolve(false);
-    });
-
-    socket.on("timeout", () => {
-      socket.destroy();
-      resolve(false);
-    });
+    socket.on("error", () => resolve(false));
+    socket.on("timeout", () => { socket.destroy(); resolve(false); });
   });
 }
 
-function getSecureOptionsForVersion(version: string): number | undefined {
-  // Use OpenSSL constants to force specific TLS versions
-  // SSL_OP_NO_TLSv1_2 etc. are negative flags (disabling higher versions)
-  switch (version) {
-    case "SSL 3.0":
-      return constants.SSL_OP_NO_TLSv1 | constants.SSL_OP_NO_TLSv1_1 |
-             constants.SSL_OP_NO_TLSv1_2 | constants.SSL_OP_NO_TLSv1_3;
-    case "TLS 1.0":
-      return constants.SSL_OP_NO_TLSv1_1 | constants.SSL_OP_NO_TLSv1_2 |
-             constants.SSL_OP_NO_TLSv1_3;
-    case "TLS 1.1":
-      return constants.SSL_OP_NO_TLSv1_2 | constants.SSL_OP_NO_TLSv1_3;
-    case "TLS 1.2":
-      return constants.SSL_OP_NO_TLSv1_3;
-    case "TLS 1.3":
-      // No options needed - TLS 1.3 is the default
-      return undefined;
-    default:
-      return undefined;
-  }
-}
+/**
+ * Probe whether a server accepts SSL 3.0 by sending a hand-crafted ClientHello
+ * over a raw TCP socket. Node.js's TLS library dropped SSL 3.0 in OpenSSL 1.1+
+ * so we can't use tls.connect for this — we go one level lower.
+ *
+ * The packet structure:
+ *   [Record layer]    0x16 (Handshake) | 0x03 0x00 (SSL 3.0) | 2-byte length
+ *   [Handshake layer] 0x01 (ClientHello) | 3-byte length
+ *   [ClientHello]     version | 32-byte random | session-id | cipher suites | compression
+ *
+ * Response interpretation:
+ *   First byte 0x16 → ServerHello  → SSL 3.0 supported
+ *   First byte 0x15 → Alert        → server rejected SSL 3.0
+ *   Connection closed / timeout    → not supported
+ */
+async function probeSSL30(domain: string, timeout: number): Promise<boolean> {
+  // Minimal SSL 3.0 ClientHello (47-byte record body, 43-byte handshake body)
+  const clientHello = Buffer.from([
+    // ── TLS Record Layer ──────────────────────────────
+    0x16,       // ContentType: Handshake
+    0x03, 0x00, // Version: SSL 3.0
+    0x00, 0x2f, // Length: 47 bytes
 
-function versionToProtocolString(version: string): string | null {
-  const mapping: Record<string, string> = {
-    "SSL 3.0": "SSLv3",
-    "TLS 1.0": "TLSv1",
-    "TLS 1.1": "TLSv1.1",
-    "TLS 1.2": "TLSv1.2",
-    "TLS 1.3": "TLSv1.3",
-  };
-  return mapping[version] || null;
+    // ── Handshake Layer ───────────────────────────────
+    0x01,             // HandshakeType: ClientHello
+    0x00, 0x00, 0x2b, // Length: 43 bytes
+
+    // ── ClientHello body ──────────────────────────────
+    0x03, 0x00, // ClientVersion: SSL 3.0
+    // 32 bytes of random (gmt_unix_time + random_bytes)
+    0x00, 0x00, 0x00, 0x00, // gmt_unix_time (4 bytes)
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // random (28 bytes)
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,
+    0x00,       // SessionID length: 0
+    0x00, 0x04, // CipherSuites length: 4 bytes (2 suites)
+    0x00, 0x04, // TLS_RSA_WITH_RC4_128_MD5
+    0x00, 0x05, // TLS_RSA_WITH_RC4_128_SHA
+    0x01,       // CompressionMethods length: 1
+    0x00,       // null compression
+  ]);
+
+  return new Promise((resolve) => {
+    let resolved = false;
+    const done = (result: boolean) => {
+      if (!resolved) {
+        resolved = true;
+        socket.destroy();
+        resolve(result);
+      }
+    };
+
+    const timer = setTimeout(() => done(false), timeout);
+
+    const socket = net.connect({ host: domain, port: 443 }, () => {
+      socket.write(clientHello);
+    });
+
+    socket.once("data", (data) => {
+      clearTimeout(timer);
+      // 0x16 = Handshake record (ServerHello) → SSL 3.0 accepted
+      // 0x15 = Alert record → rejected
+      done(data[0] === 0x16);
+    });
+
+    socket.on("error", () => { clearTimeout(timer); done(false); });
+    socket.on("close", () => { clearTimeout(timer); done(false); });
+  });
 }

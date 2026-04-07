@@ -8,10 +8,11 @@ export interface SSLLabsEndpoint {
   hasWarnings?: boolean;
   isExceptional?: boolean;
   details?: {
-    protocolSupport?: {
+    // SSL Labs v3 returns only supported protocols in this array (no `supported` field)
+    protocols?: {
+      id: number;
       name: string;
       version: string;
-      supported: boolean;
     }[];
     suites?: {
       protocol: number;
@@ -131,9 +132,11 @@ export async function getScanStatus(
 }
 
 /**
- * Map SSL Labs protocol data to our ProtocolSupport format
+ * Map SSL Labs protocol data to our ProtocolSupport format.
+ * SSL Labs v3 returns only the *supported* protocols in the array —
+ * presence in the array means supported, absence means not supported.
  */
-export function mapProtocols(protocols?: { name: string; version: string; supported: boolean }[]): ProtocolSupport[] {
+export function mapProtocols(protocols?: { id?: number; name: string; version: string }[]): ProtocolSupport[] {
   const allVersions = [
     { version: "TLS 1.3", risk: "none" as const },
     { version: "TLS 1.2", risk: "none" as const },
@@ -152,7 +155,8 @@ export function mapProtocols(protocols?: { name: string; version: string; suppor
     );
     return {
       version: p.version,
-      supported: match?.supported ?? false,
+      // Presence in the SSL Labs protocols array means it IS supported
+      supported: match !== undefined,
       risk: p.risk,
     };
   });
@@ -170,11 +174,11 @@ export function mapCipherSuites(
 
   for (const suite of suites) {
     for (const cipher of suite.list || []) {
-      // Map cipherStrength (0-100) to our strength categories
+      // cipherStrength is bit-length (e.g. 128, 256) in SSL Labs v3
       let strength: CipherSuite["strength"];
-      if (cipher.cipherStrength >= 80) strength = "strong";
-      else if (cipher.cipherStrength >= 60) strength = "acceptable";
-      else if (cipher.cipherStrength >= 40) strength = "weak";
+      if (cipher.cipherStrength >= 128) strength = "strong";
+      else if (cipher.cipherStrength >= 112) strength = "acceptable";
+      else if (cipher.cipherStrength >= 56) strength = "weak";
       else strength = "insecure";
 
       ciphers.push({

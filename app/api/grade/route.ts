@@ -98,7 +98,7 @@ export async function GET(req: Request) {
       ...baseResult,
       domain: validDomain,
       grade: getGrade(result.endpoints) || baseResult.grade || "B",
-      protocols: mapProtocols(endpoint.details?.protocolSupport),
+      protocols: mapProtocols(endpoint.details?.protocols),
       cipherSuites: mapCipherSuites(endpoint.details?.suites),
       vulnerabilities: mapVulnerabilities(endpoint.details),
       scannedAt: new Date().toISOString(),
