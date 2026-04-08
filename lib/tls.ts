@@ -225,23 +225,27 @@ function parseCertEntry(
 // secureOptions bit-flags, which are unreliable across OpenSSL versions.
 // SSL 3.0 is probed separately via a raw TCP hand-crafted ClientHello because
 // OpenSSL 1.1+ removed SSL 3.0 from its TLS stack entirely.
+//
+// IMPORTANT: Node.js 18+ / OpenSSL 3.x blocks outgoing TLS 1.0 and 1.1
+// connections at the library level (legacy sigalg disallowed) regardless of
+// minVersion/maxVersion settings. TLS 1.0/1.1 detection is therefore marked
+// "unknown" and delegated to SSL Labs deep-scan data which runs its own scanner.
 export async function detectProtocols(domain: string): Promise<ProtocolSupport[]> {
   const DETECTION_TIMEOUT = 5000;
 
-  const [tls13, tls12, tls11, tls10, ssl30] = await Promise.all([
+  const [tls13, tls12, ssl30] = await Promise.all([
     testProtocolVersion(domain, "TLSv1.3", "TLSv1.3", DETECTION_TIMEOUT),
     testProtocolVersion(domain, "TLSv1.2", "TLSv1.2", DETECTION_TIMEOUT),
-    testProtocolVersion(domain, "TLSv1.1", "TLSv1.1", DETECTION_TIMEOUT),
-    testProtocolVersion(domain, "TLSv1",   "TLSv1",   DETECTION_TIMEOUT),
     probeSSL30(domain, DETECTION_TIMEOUT),
   ]);
 
   return [
-    { version: "TLS 1.3", supported: tls13,  risk: "none" },
-    { version: "TLS 1.2", supported: tls12,  risk: "none" },
-    { version: "TLS 1.1", supported: tls11,  risk: "low"  },
-    { version: "TLS 1.0", supported: tls10,  risk: "high" },
-    { version: "SSL 3.0", supported: ssl30,  risk: "high" },
+    { version: "TLS 1.3", supported: tls13,  detectionStatus: "detected", risk: "none" },
+    { version: "TLS 1.2", supported: tls12,  detectionStatus: "detected", risk: "none" },
+    // TLS 1.1/1.0 cannot be probed from Node.js 18+/OpenSSL 3.x — deferred to SSL Labs
+    { version: "TLS 1.1", supported: false,  detectionStatus: "unknown",  risk: "low"  },
+    { version: "TLS 1.0", supported: false,  detectionStatus: "unknown",  risk: "high" },
+    { version: "SSL 3.0", supported: ssl30,  detectionStatus: "detected", risk: "high" },
   ];
 }
 

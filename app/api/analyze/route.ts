@@ -79,8 +79,33 @@ export async function POST(req: Request) {
     if (!force) {
       const cached = await getCache(domain);
       if (cached) {
-        // Return cached result immediately
-        return NextResponse.json(cached);
+        // Still persist this "view" to DB for recent lookups tracking
+        // Generate new shareId so each user gets their own permalink
+        const viewShareId = nanoid(8);
+        const viewedAt = new Date().toISOString();
+        const viewExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        
+        const viewResult: ScanResult = {
+          ...cached,
+          shareId: viewShareId,
+          scannedAt: viewedAt,
+        };
+        
+        // Persist view to DB (non-blocking)
+        try {
+          await db.insert(scans).values({
+            shareId: viewShareId,
+            domain,
+            grade: cached.grade,
+            result: viewResult as unknown as Record<string, unknown>,
+            scannedAt: new Date(viewedAt),
+            expiresAt: viewExpiresAt,
+          });
+        } catch (dbErr) {
+          console.error("Failed to persist cached view:", dbErr);
+        }
+        
+        return NextResponse.json(viewResult);
       }
     } else {
       // Force refresh: clear existing cache

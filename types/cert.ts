@@ -26,6 +26,9 @@ export interface ChainEntry extends CertInfo {
 export interface ProtocolSupport {
   version: string; // "TLS 1.3", "TLS 1.2", etc.
   supported: boolean;
+  // "unknown" = cannot be tested locally (TLS 1.0/1.1 on Node.js 18+ / OpenSSL 3.x);
+  // will be resolved once SSL Labs deep-scan data arrives.
+  detectionStatus?: "detected" | "unknown";
   risk: "none" | "low" | "high";
 }
 

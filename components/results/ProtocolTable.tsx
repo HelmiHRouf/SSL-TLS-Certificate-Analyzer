@@ -1,6 +1,7 @@
 import type { ProtocolSupport } from "@/types/cert";
 import { LearnTooltip } from "./LearnTooltip";
 import { LEARN_CONTENT } from "@/lib/learn-content";
+import { Loader2 } from "lucide-react";
 
 interface ProtocolTableProps {
   protocols: ProtocolSupport[];
@@ -28,17 +29,24 @@ export function ProtocolTable({ protocols }: ProtocolTableProps) {
             >
               <span className="text-sm text-gray-800 dark:text-gray-200">{protocol.version}</span>
               <div className="flex items-center">
-                <span
-                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                    protocol.supported
-                      ? protocol.risk === "none"
-                        ? "bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-400"
-                        : "bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-400"
-                      : "bg-red-100/70 dark:bg-red-900/30 text-red-700 dark:text-red-400"
-                  }`}
-                >
-                  {protocol.supported ? "Supported" : "Disabled"}
-                </span>
+                {protocol.detectionStatus === "unknown" ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Scanning…
+                  </span>
+                ) : (
+                  <span
+                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                      protocol.supported
+                        ? protocol.risk === "none"
+                          ? "bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-400"
+                          : "bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-400"
+                        : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
+                    }`}
+                  >
+                    {protocol.supported ? "Supported" : "Disabled"}
+                  </span>
+                )}
                 {learn && (
                   <LearnTooltip
                     title={learn.title}

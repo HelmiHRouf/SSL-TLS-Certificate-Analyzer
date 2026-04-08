@@ -6,11 +6,13 @@
  * (→ supported) and what the SSL 3.0 raw TCP probe receives back from the server.
  *
  * Real-world reference domains (manual smoke-testing only — configs may change):
- *   TLS 1.3 + 1.2 only  →  google.com, cloudflare.com
- *   TLS 1.2 only        →  tls-v1-2.badssl.com
- *   TLS 1.1 only        →  tls-v1-1.badssl.com  (needs legacy OpenSSL client)
- *   TLS 1.0 only        →  tls-v1-0.badssl.com  (needs legacy OpenSSL client)
- *   SSL 3.0             →  no public server still accepts it; rely on mocks
+ *   TLS 1.3 + 1.2  →  google.com, cloudflare.com
+ *   TLS 1.2 only   →  tls-v1-2.badssl.com
+ *   TLS 1.1 / 1.0  →  tls-v1-1.badssl.com / tls-v1-0.badssl.com
+ *                      NOTE: these cannot be probed from Node.js 18+/OpenSSL 3.x
+ *                      (legacy sigalg blocked). Their result is always "unknown"
+ *                      and filled in later by SSL Labs deep-scan data.
+ *   SSL 3.0        →  no public server still accepts it; rely on mocks
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -110,16 +112,16 @@ describe("detectProtocols", () => {
     vi.clearAllMocks();
   });
 
-  it("modern server: only TLS 1.3 and 1.2", async () => {
+  it("modern server: TLS 1.3 and 1.2 detected, legacy marked unknown", async () => {
     setupTls(["TLSv1.3", "TLSv1.2"]);
     setupNet(0x15); // SSL 3.0 alert
 
     expect(await detectProtocols("example.com")).toEqual([
-      { version: "TLS 1.3", supported: true,  risk: "none" },
-      { version: "TLS 1.2", supported: true,  risk: "none" },
-      { version: "TLS 1.1", supported: false, risk: "low"  },
-      { version: "TLS 1.0", supported: false, risk: "high" },
-      { version: "SSL 3.0", supported: false, risk: "high" },
+      { version: "TLS 1.3", supported: true,  detectionStatus: "detected", risk: "none" },
+      { version: "TLS 1.2", supported: true,  detectionStatus: "detected", risk: "none" },
+      { version: "TLS 1.1", supported: false, detectionStatus: "unknown",  risk: "low"  },
+      { version: "TLS 1.0", supported: false, detectionStatus: "unknown",  risk: "high" },
+      { version: "SSL 3.0", supported: false, detectionStatus: "detected", risk: "high" },
     ]);
   });
 
@@ -128,38 +130,23 @@ describe("detectProtocols", () => {
     setupNet(0x15);
 
     expect(await detectProtocols("example.com")).toEqual([
-      { version: "TLS 1.3", supported: false, risk: "none" },
-      { version: "TLS 1.2", supported: true,  risk: "none" },
-      { version: "TLS 1.1", supported: false, risk: "low"  },
-      { version: "TLS 1.0", supported: false, risk: "high" },
-      { version: "SSL 3.0", supported: false, risk: "high" },
+      { version: "TLS 1.3", supported: false, detectionStatus: "detected", risk: "none" },
+      { version: "TLS 1.2", supported: true,  detectionStatus: "detected", risk: "none" },
+      { version: "TLS 1.1", supported: false, detectionStatus: "unknown",  risk: "low"  },
+      { version: "TLS 1.0", supported: false, detectionStatus: "unknown",  risk: "high" },
+      { version: "SSL 3.0", supported: false, detectionStatus: "detected", risk: "high" },
     ]);
   });
 
-  it("legacy server: TLS 1.2 + 1.1 + 1.0", async () => {
-    setupTls(["TLSv1.2", "TLSv1.1", "TLSv1"]);
+  it("TLS 1.1 and 1.0 are always marked unknown (OpenSSL 3.x limitation)", async () => {
+    // Even if we configure "success" for TLSv1.1/TLSv1, detectProtocols
+    // no longer calls testProtocolVersion for those — they are unconditionally unknown.
+    setupTls(["TLSv1.3", "TLSv1.2", "TLSv1.1", "TLSv1"]);
     setupNet(0x15);
 
-    expect(await detectProtocols("legacy.example.com")).toEqual([
-      { version: "TLS 1.3", supported: false, risk: "none" },
-      { version: "TLS 1.2", supported: true,  risk: "none" },
-      { version: "TLS 1.1", supported: true,  risk: "low"  },
-      { version: "TLS 1.0", supported: true,  risk: "high" },
-      { version: "SSL 3.0", supported: false, risk: "high" },
-    ]);
-  });
-
-  it("very old server: all TLS + SSL 3.0", async () => {
-    setupTls(["TLSv1.3", "TLSv1.2", "TLSv1.1", "TLSv1"]);
-    setupNet(0x16); // ServerHello → SSL 3.0 accepted
-
-    expect(await detectProtocols("ancient.example.com")).toEqual([
-      { version: "TLS 1.3", supported: true,  risk: "none" },
-      { version: "TLS 1.2", supported: true,  risk: "none" },
-      { version: "TLS 1.1", supported: true,  risk: "low"  },
-      { version: "TLS 1.0", supported: true,  risk: "high" },
-      { version: "SSL 3.0", supported: true,  risk: "high" },
-    ]);
+    const result = await detectProtocols("example.com");
+    expect(result.find((p) => p.version === "TLS 1.1")).toMatchObject({ detectionStatus: "unknown" });
+    expect(result.find((p) => p.version === "TLS 1.0")).toMatchObject({ detectionStatus: "unknown" });
   });
 
   it("SSL 3.0 probe: server sends Alert (0x15) → not supported", async () => {
@@ -167,7 +154,10 @@ describe("detectProtocols", () => {
     setupNet(0x15);
 
     const result = await detectProtocols("example.com");
-    expect(result.find((p) => p.version === "SSL 3.0")!.supported).toBe(false);
+    expect(result.find((p) => p.version === "SSL 3.0")).toMatchObject({
+      supported: false,
+      detectionStatus: "detected",
+    });
   });
 
   it("SSL 3.0 probe: server sends ServerHello (0x16) → supported", async () => {
@@ -175,12 +165,15 @@ describe("detectProtocols", () => {
     setupNet(0x16);
 
     const result = await detectProtocols("example.com");
-    expect(result.find((p) => p.version === "SSL 3.0")!.supported).toBe(true);
+    expect(result.find((p) => p.version === "SSL 3.0")).toMatchObject({
+      supported: true,
+      detectionStatus: "detected",
+    });
   });
 
   it("SSL 3.0 probe: server closes with no data → not supported", async () => {
     setupTls([]);
-    setupNet(null); // close event, no data
+    setupNet(null);
 
     const result = await detectProtocols("example.com");
     expect(result.find((p) => p.version === "SSL 3.0")!.supported).toBe(false);
@@ -191,16 +184,18 @@ describe("detectProtocols", () => {
     setupNet(0x15);
 
     const result = await detectProtocols("slow.example.com");
-    // Only SSL 3.0 check is via net, all TLS versions timeout → false
-    expect(result.filter((p) => p.version !== "SSL 3.0").every((p) => !p.supported)).toBe(true);
+    expect(result.find((p) => p.version === "TLS 1.3")!.supported).toBe(false);
+    expect(result.find((p) => p.version === "TLS 1.2")!.supported).toBe(false);
   });
 
-  it("all versions rejected → all false", async () => {
-    setupTls([]);    // every TLS version fails
-    setupNet(0x15); // SSL 3.0 rejected
+  it("all detectable versions rejected → all false / unknown", async () => {
+    setupTls([]);
+    setupNet(0x15);
 
     const result = await detectProtocols("broken.example.com");
-    expect(result.every((p) => !p.supported)).toBe(true);
+    expect(result.find((p) => p.version === "TLS 1.3")!.supported).toBe(false);
+    expect(result.find((p) => p.version === "TLS 1.2")!.supported).toBe(false);
+    expect(result.find((p) => p.version === "SSL 3.0")!.supported).toBe(false);
   });
 
   it("returns exactly 5 entries in correct order", async () => {
@@ -213,7 +208,7 @@ describe("detectProtocols", () => {
     ]);
   });
 
-  it("risk levels are correct regardless of support status", async () => {
+  it("risk levels are always correct", async () => {
     setupTls([]);
     setupNet(0x15);
 
